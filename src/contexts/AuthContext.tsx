@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGitHub = async () => {
     try {
       const redirectUrl = process.env.NODE_ENV === 'production'
-        ? 'https://algomate-8326.vercel.app/dashboard'  // Replace with your Vercel URL
+        ? 'https://algomate-8326.vercel.app/' 
         : 'http://localhost:3000/dashboard'
 
       const { data, error } = await supabase.auth.signInWithOAuth({
