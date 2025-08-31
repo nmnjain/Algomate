@@ -79,10 +79,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGitHub = async () => {
     try {
+      const redirectUrl = process.env.NODE_ENV === 'production'
+        ? 'https://algomate-8326.vercel.app/dashboard'  // Replace with your Vercel URL
+        : 'http://localhost:3000/dashboard'
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
+          redirectTo: redirectUrl
         }
       })
       return { data, error }
@@ -90,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('GitHub sign in error:', error)
       return { data: null, error }
     }
-  }
+}
 
   const signOut = async () => {
     try {
