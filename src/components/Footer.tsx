@@ -41,7 +41,7 @@ export function Footer() {
                 <Code2 size={32} className="text-primary" />
               </motion.div>
               <span className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                TechConnect
+                Algomate
               </span>
             </div>
             
@@ -147,7 +147,7 @@ export function Footer() {
           viewport={{ once: true }}
         >
           <p className="text-muted-foreground text-sm mb-4 md:mb-0">
-            © 2024 TechConnect. All rights reserved. Built with ❤️ for developers.
+            © 2024 Algomate. All rights reserved. Built with ❤️ for developers.
           </p>
           <div className="flex gap-6 text-sm">
             <motion.a

@@ -7,7 +7,7 @@ const testimonials = [
     name: "Sarah Chen",
     role: "Full Stack Developer",
     company: "Meta",
-    testimonial: "TechConnect helped me showcase my projects in a way that finally got me noticed by top tech companies.",
+    testimonial: "Algomate helped me showcase my projects in a way that finally got me noticed by top tech companies.",
     avatar: "SC",
     rating: 5,
     color: "text-primary"
@@ -37,7 +37,7 @@ const testimonials = [
     name: "Alex Johnson",
     role: "Frontend Developer",
     company: "Stripe",
-    testimonial: "Won my first hackathon using insights from TechConnect's coding analytics. Game changer!",
+    testimonial: "Won my first hackathon using insights from Algomate's coding analytics. Game changer!",
     avatar: "AJ",
     rating: 5,
     color: "text-green-400"
@@ -57,7 +57,7 @@ const testimonials = [
     name: "David Kim",
     role: "Backend Engineer",
     company: "Airbnb",
-    testimonial: "Clean interface, powerful features. TechConnect is essential for any serious developer.",
+    testimonial: "Clean interface, powerful features. Algomate is essential for any serious developer.",
     avatar: "DK",
     rating: 5,
     color: "text-pink-400"
@@ -79,7 +79,7 @@ export function TestimonialsSection() {
             Loved by Developers
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Join thousands of developers who've accelerated their careers with TechConnect.
+            Join thousands of developers who've accelerated their careers with Algomate.
           </p>
         </motion.div>
 

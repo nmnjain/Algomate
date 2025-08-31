@@ -36,7 +36,7 @@ export function Header() {
               <Code2 size={24} className="text-primary" />
             </motion.div>
             <span className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              TechConnect
+              Algomate
             </span>
           </motion.div>
 

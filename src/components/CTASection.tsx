@@ -84,7 +84,7 @@ export function CTASection() {
               transition={{ duration: 0.8, delay: 0.2 }}
               viewport={{ once: true }}
             >
-              Join TechConnect and supercharge your career with AI-powered insights, 
+              Join Algomate and supercharge your career with AI-powered insights, 
               beautiful portfolios, and access to the best hackathons worldwide.
             </motion.p>
             

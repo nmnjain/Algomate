@@ -109,7 +109,7 @@ export function HeroSection() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
         >
-          TechConnect helps developers build smart portfolios, track coding growth, and discover hackathons that matter.
+          Algomate helps developers build smart portfolios, track coding growth, and discover hackathons that matter.
         </motion.p>
         
         <motion.div
