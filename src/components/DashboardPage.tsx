@@ -18,7 +18,11 @@ export function DashboardPage() {
     try {
       await signOut()
       toast.success('Signed out successfully')
-      navigate('/')
+      
+      // Small delay to ensure state is updated before navigation
+      setTimeout(() => {
+        navigate('/')
+      }, 100)
     } catch (error) {
       toast.error('Error signing out')
       console.error('Sign out error:', error)
