@@ -29,6 +29,16 @@ yarn-error.log*
 !.vscode/extensions.json
 .idea
 
+# Temporary project files (remove these lines after development)
 project.txt
 Project_Report_and_Checklist.txt
-/supabase
+GITHUB_CONNECTION_STRATEGY.md
+
+# Supabase local development (keep functions in repo, exclude migrations and config)
+.vercel
+supabase/migrations/
+supabase/config.toml
+supabase/.branches/
+supabase/.temp/
+.supabase/
+src/lib/supabase/README.md

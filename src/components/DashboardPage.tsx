@@ -1,13 +1,18 @@
 import { motion } from "motion/react"
 import { Button } from "./ui/button"
-import { Code2, LogOut, Github, Mail, FileText, Trophy, Activity, Star } from "lucide-react"
+import { Code2, LogOut, Github, Mail, FileText, Trophy, Activity, Star, GitBranch, Users } from "lucide-react"
 import { useAuth } from '../contexts/AuthContext'
-import { useRouter } from './Router'
-import { toast } from "sonner@2.0.3"
+import { useNavigate } from 'react-router-dom'
+import { toast } from "sonner";
+import { useGitHubData } from '../utils/useGitHubData';
+import { useGitHubConnectionStatus, useGitHubActionStatus } from '../utils/useGitHubConnectionStatus'
 
 export function DashboardPage() {
-  const { user, signOut } = useAuth()
-  const { navigate } = useRouter()
+  const { user, signOut, signInWithGitHub } = useAuth()
+  const navigate = useNavigate()
+  const { data: githubData, loading: githubLoading, backgroundRefreshing, error: githubError, cacheInfo, refetch, fetchInitial } = useGitHubData()
+  const connectionStatus = useGitHubConnectionStatus()
+  const actionStatus = useGitHubActionStatus()
 
   const handleSignOut = async () => {
     try {
@@ -20,7 +25,50 @@ export function DashboardPage() {
     }
   }
 
-  const stats = [
+  const handleGitHubAction = async () => {
+    try {
+      switch (actionStatus.action) {
+        case 'connect':
+        case 'reconnect':
+          const { error } = await signInWithGitHub();
+          if (error) {
+            toast.error(`GitHub connection failed: ${error.message}`);
+          } else {
+            toast.success('GitHub account connected successfully!');
+            // Fetch fresh data after successful connection
+            setTimeout(() => {
+              fetchInitial();
+            }, 2000);
+          }
+          break;
+          
+        case 'sync':
+          toast.info('Loading GitHub data...');
+          await fetchInitial();
+          toast.success('GitHub data loaded successfully!');
+          break;
+          
+        case 'refresh':
+          toast.info('Refreshing GitHub data...');
+          await refetch();
+          toast.success('GitHub data refreshed successfully!');
+          break;
+      }
+    } catch (error) {
+      toast.error('Failed to perform GitHub action');
+      console.error('GitHub action error:', error);
+    }
+  };
+
+  // Determine if user has GitHub data to display
+  const hasGitHubData = githubData && !githubError;
+
+  const stats = hasGitHubData ? [
+    { icon: GitBranch, label: "Repositories", value: githubData.stats.totalRepos.toString(), color: "text-primary" },
+    { icon: Star, label: "Total Stars", value: githubData.stats.totalStars.toString(), color: "text-secondary" },
+    { icon: Activity, label: "Commits", value: githubData.stats.totalCommits.toString(), color: "text-accent" },
+    { icon: Users, label: "Followers", value: githubData.profile.followers.toString(), color: "text-green-400" }
+  ] : [
     { icon: Activity, label: "Coding Streak", value: "0 days", color: "text-primary" },
     { icon: Star, label: "Total Points", value: "0", color: "text-secondary" },
     { icon: Trophy, label: "Hackathons", value: "0", color: "text-accent" },
@@ -44,6 +92,12 @@ export function DashboardPage() {
             <span className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
               Algomate
             </span>
+            {backgroundRefreshing && (
+              <div className="ml-3 flex items-center gap-1 text-xs text-primary">
+                <div className="animate-spin w-3 h-3 border border-primary border-t-transparent rounded-full"></div>
+                <span>Syncing...</span>
+              </div>
+            )}
           </motion.div>
 
           <motion.div
@@ -126,13 +180,65 @@ export function DashboardPage() {
             className="glassmorphism p-8 rounded-2xl group hover:scale-105 transition-all duration-300"
             whileHover={{ y: -10 }}
           >
-            <Github size={48} className="text-gray-400 mb-6 group-hover:text-white transition-colors" />
-            <h3 className="text-xl font-semibold mb-4 text-foreground">Connect GitHub</h3>
+            <Github size={48} className={`mb-6 group-hover:scale-110 transition-transform ${
+              hasGitHubData ? 'text-green-400' : 
+              connectionStatus.isConnected ? 'text-blue-400' : 
+              'text-gray-400 group-hover:text-white'
+            }`} />
+            <h3 className="text-xl font-semibold mb-4 text-foreground">
+              {actionStatus.action === 'loading' ? 'Checking Connection' : 
+               hasGitHubData ? 'GitHub Connected' : 
+               connectionStatus.isConnected ? 'GitHub Connected' : 'Connect GitHub'}
+            </h3>
             <p className="text-muted-foreground mb-6">
-              Sync your repositories and showcase your coding projects automatically.
+              {hasGitHubData 
+                ? `Connected as ${githubData.profile.login}. Your repositories and stats are displayed above.`
+                : connectionStatus.isConnected
+                ? 'GitHub account connected. Click below to load your repository data.'
+                : 'Sync your repositories and showcase your coding projects automatically.'
+              }
             </p>
-            <Button className="w-full bg-gray-800 hover:bg-gray-700 text-white">
-              Connect GitHub
+            
+            {/* Connection Status Info */}
+            {connectionStatus.isConnected && connectionStatus.lastSyncAt && (
+              <div className="text-xs text-muted-foreground mb-4 p-2 bg-muted/20 rounded flex items-center justify-between">
+                <span>Last synced: {new Date(connectionStatus.lastSyncAt).toLocaleString()}</span>
+                {backgroundRefreshing && (
+                  <div className="flex items-center gap-1">
+                    <div className="animate-spin w-3 h-3 border border-primary border-t-transparent rounded-full"></div>
+                    <span className="text-primary">Updating...</span>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Cache Info */}
+            {cacheInfo.exists && (
+              <div className="text-xs text-muted-foreground mb-4 p-2 bg-muted/10 rounded border border-muted/30">
+                <div className="flex items-center justify-between">
+                  <span>
+                    Data age: {cacheInfo.ageInHours ? `${cacheInfo.ageInHours.toFixed(1)} hours` : 'Unknown'}
+                  </span>
+                  <span className={`px-2 py-1 rounded text-xs ${
+                    cacheInfo.isStale 
+                      ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' 
+                      : 'bg-green-500/20 text-green-400 border border-green-500/30'
+                  }`}>
+                    {cacheInfo.isStale ? 'Refreshing' : 'Fresh'}
+                  </span>
+                </div>
+              </div>
+            )}
+            <Button 
+              className={`w-full ${
+                hasGitHubData ? 'bg-green-600 hover:bg-green-700' :
+                connectionStatus.isConnected ? 'bg-blue-600 hover:bg-blue-700' :
+                'bg-gray-800 hover:bg-gray-700'
+              } text-white`}
+              onClick={handleGitHubAction}
+              disabled={actionStatus.disabled || githubLoading}
+            >
+              {githubLoading ? 'Loading...' : actionStatus.label}
             </Button>
           </motion.div>
 
@@ -169,15 +275,94 @@ export function DashboardPage() {
 
         {/* Recent Activity */}
         <motion.div
-          className="glassmorphism p-8 rounded-2xl"
+          className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12"
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
         >
-          <h2 className="text-2xl font-semibold mb-6 text-foreground">Recent Activity</h2>
-          <div className="text-center py-12">
-            <Activity size={48} className="mx-auto mb-4 text-muted-foreground/50" />
-            <p className="text-muted-foreground">No activity yet. Start by connecting your GitHub or uploading your resume!</p>
+          {/* Recent Repositories */}
+          <div className="glassmorphism p-8 rounded-2xl">
+            <h2 className="text-2xl font-semibold mb-6 text-foreground">Recent Repositories</h2>
+            {hasGitHubData ? (
+              <div className="space-y-4">
+                {githubData.recentRepos.map((repo, index) => (
+                  <motion.div
+                    key={repo.name}
+                    className="p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-foreground hover:text-primary">
+                          <a href={repo.html_url} target="_blank" rel="noopener noreferrer">
+                            {repo.name}
+                          </a>
+                        </h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {repo.description || "No description available"}
+                        </p>
+                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                          {repo.language && (
+                            <span className="flex items-center gap-1">
+                              <div className="w-2 h-2 rounded-full bg-primary"></div>
+                              {repo.language}
+                            </span>
+                          )}
+                          <span className="flex items-center gap-1">
+                            <Star size={12} />
+                            {repo.stars}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <GitBranch size={12} />
+                            {repo.forks}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Github size={48} className="mx-auto mb-4 text-muted-foreground/50" />
+                <p className="text-muted-foreground">
+                  {githubLoading ? "Loading repositories..." : "Connect GitHub to see your repositories"}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Top Languages */}
+          <div className="glassmorphism p-8 rounded-2xl">
+            <h2 className="text-2xl font-semibold mb-6 text-foreground">Top Languages</h2>
+            {hasGitHubData && githubData.stats.topLanguages.length > 0 ? (
+              <div className="space-y-4">
+                {githubData.stats.topLanguages.map(([language, count], index) => (
+                  <motion.div
+                    key={language}
+                    className="flex items-center justify-between"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-full bg-gradient-to-r from-primary to-secondary"></div>
+                      <span className="font-medium text-foreground">{language}</span>
+                    </div>
+                    <span className="text-sm text-muted-foreground">{count} repos</span>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Code2 size={48} className="mx-auto mb-4 text-muted-foreground/50" />
+                <p className="text-muted-foreground">
+                  {githubLoading ? "Loading languages..." : "Connect GitHub to see your top languages"}
+                </p>
+              </div>
+            )}
           </div>
         </motion.div>
       </main>

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
-import { supabase } from '../utils/supabase/client'
+import { supabase } from '../lib/supabase'
 
 interface AuthContextType {
   user: User | null
@@ -10,7 +10,6 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<any>
   signInWithGitHub: () => Promise<any>
   signOut: () => Promise<any>
-  uploadResume: (file: File) => Promise<string | null>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -79,17 +78,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGitHub = async () => {
     try {
-      const redirectUrl = process.env.NODE_ENV === 'production'
-        ? 'https://algomate-8326.vercel.app/' 
-        : 'http://localhost:3000/dashboard'
+      // Use a dynamic redirect URL based on the environment
+      const redirectUrl = window.location.origin;
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
-          redirectTo: redirectUrl
-        }
-      })
-      return { data, error }
+          redirectTo: `${redirectUrl}/auth/callback`,
+        },
+      });
+      return { data, error };
     } catch (error) {
       console.error('GitHub sign in error:', error)
       return { data: null, error }
@@ -106,31 +104,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const uploadResume = async (file: File): Promise<string | null> => {
-    try {
-      if (!user) throw new Error('User not authenticated')
-      
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${user.id}-resume-${Date.now()}.${fileExt}`
-      
-      const { data, error } = await supabase.storage
-        .from('resumes')
-        .upload(fileName, file)
-
-      if (error) throw error
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('resumes')
-        .getPublicUrl(fileName)
-
-      return urlData.publicUrl
-    } catch (error) {
-      console.error('Resume upload error:', error)
-      return null
-    }
-  }
-
   const value = {
     user,
     session,
@@ -139,7 +112,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signInWithGitHub,
     signOut,
-    uploadResume
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

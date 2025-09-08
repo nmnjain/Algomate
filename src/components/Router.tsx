@@ -1,32 +1,20 @@
-import { useState, useEffect } from 'react'
-import { useAuth } from '../contexts/AuthContext'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import App from '../App';
+import {LoginPage} from './LoginPage';
+import {SignupPage} from './SignupPage';
+import {DashboardPage} from './DashboardPage';
+import AuthCallback from './AuthCallback';
+import { useAuth } from '../contexts/AuthContext';
+import { HeroSection } from './HeroSection';
+import { FeaturesSection } from './FeaturesSection';
+import { DashboardPreview } from './DashboardPreview';
+import { AIRecommendations } from './AIRecommendations';
+import { HackathonDiscovery } from './HackathonDiscovery';
+import { TestimonialsSection } from './TestimonialsSection';
+import { CTASection } from './CTASection';
 
-interface RouterProps {
-  children: React.ReactNode
-}
-
-export function Router({ children }: RouterProps) {
-  const [currentPath, setCurrentPath] = useState(window.location.pathname)
-  const { user, loading } = useAuth()
-
-  useEffect(() => {
-    const handlePopState = () => {
-      setCurrentPath(window.location.pathname)
-    }
-
-    window.addEventListener('popstate', handlePopState)
-    return () => window.removeEventListener('popstate', handlePopState)
-  }, [])
-
-  const navigate = (path: string) => {
-    window.history.pushState(null, '', path)
-    setCurrentPath(path)
-  }
-
-  // Make navigate function available globally
-  useEffect(() => {
-    (window as any).navigate = navigate
-  }, [])
+export function AppRouter() {
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -36,17 +24,30 @@ export function Router({ children }: RouterProps) {
           <p className="text-center mt-4 text-muted-foreground">Loading...</p>
         </div>
       </div>
-    )
+    );
   }
 
-  return <>{children}</>
-}
-
-export function useRouter() {
-  const navigate = (path: string) => {
-    window.history.pushState(null, '', path)
-    window.dispatchEvent(new PopStateEvent('popstate'))
-  }
-
-  return { navigate, currentPath: window.location.pathname }
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<App />}>
+          <Route index element={
+            <>
+              <HeroSection />
+              <FeaturesSection />
+              <DashboardPreview />
+              <AIRecommendations />
+              <HackathonDiscovery />
+              <TestimonialsSection />
+              <CTASection />
+            </>
+          } />
+          <Route path="login" element={!user ? <LoginPage /> : <Navigate to="/dashboard" />} />
+          <Route path="signup" element={!user ? <SignupPage /> : <Navigate to="/dashboard" />} />
+          <Route path="dashboard" element={user ? <DashboardPage /> : <Navigate to="/login" />} />
+          <Route path="auth/callback" element={<AuthCallback />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
 }

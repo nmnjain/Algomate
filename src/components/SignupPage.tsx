@@ -5,7 +5,7 @@ import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Github, Mail, Lock, ArrowLeft, Eye, EyeOff, Code2, Sparkles, Upload, FileText, User, X } from "lucide-react"
 import { useAuth } from '../contexts/AuthContext'
-import { useRouter } from './Router'
+import { useNavigate } from 'react-router-dom'
 import { toast } from "sonner"
 
 export function SignupPage() {
@@ -20,7 +20,7 @@ export function SignupPage() {
   const [isLoading, setIsLoading] = useState(false)
   
   const { signUp } = useAuth()
-  const { navigate } = useRouter()
+  const navigate = useNavigate()
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -62,21 +62,21 @@ export function SignupPage() {
     }
   }
 
-  const handleGitHubSignup = async () => {
-    setIsLoading(true)
-    try {
-      const { error } = await signInWithGitHub()
-      if (error) {
-        toast.error(`GitHub signup failed: ${error.message}`)
-        setIsLoading(false)
-      }
-      // Note: If successful, user will be redirected to GitHub and back
-    } catch (error) {
-      toast.error('GitHub signup failed')
-      console.error('GitHub signup error:', error)
-      setIsLoading(false)
-    }
-  }
+  // const handleGitHubSignup = async () => {
+  //   setIsLoading(true)
+  //   try {
+  //     const { error } = await signInWithGitHub()
+  //     if (error) {
+  //       toast.error(`GitHub signup failed: ${error.message}`)
+  //       setIsLoading(false)
+  //     }
+  //     // Note: If successful, user will be redirected to GitHub and back
+  //   } catch (error) {
+  //     toast.error('GitHub signup failed')
+  //     console.error('GitHub signup error:', error)
+  //     setIsLoading(false)
+  //   }
+  // }
 
   return (
     <div className="dark min-h-screen bg-background text-foreground gradient-mesh flex items-center justify-center relative overflow-hidden py-12">

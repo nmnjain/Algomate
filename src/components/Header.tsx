@@ -3,12 +3,12 @@ import { Button } from "./ui/button";
 import { Code2, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from '../contexts/AuthContext';
-import { useRouter } from './Router';
+import { useNavigate } from 'react-router-dom';
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user } = useAuth();
-  const { navigate } = useRouter();
+  const navigate = useNavigate();
 
   const navItems = [
     { label: "Features", href: "#features" },

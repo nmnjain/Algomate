@@ -5,7 +5,7 @@ import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Github, Mail, Lock, ArrowLeft, Eye, EyeOff, Code2, Sparkles } from "lucide-react"
 import { useAuth } from '../contexts/AuthContext'
-import { useRouter } from './Router'
+import { useNavigate } from 'react-router-dom'
 import { toast } from "sonner@2.0.3"
 
 export function LoginPage() {
@@ -14,7 +14,7 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const { signIn, signInWithGitHub } = useAuth()
-  const { navigate } = useRouter()
+  const navigate = useNavigate()
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault()

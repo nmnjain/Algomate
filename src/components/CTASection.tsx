@@ -1,10 +1,10 @@
 import { motion } from "motion/react";
 import { Button } from "./ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
-import { useRouter } from './Router';
+import { useNavigate } from 'react-router-dom';
 
 export function CTASection() {
-  const { navigate } = useRouter();
+  const navigate = useNavigate();
   return (
     <section className="py-24 px-6 relative">
       <div className="max-w-4xl mx-auto text-center">
