@@ -28,3 +28,7 @@ yarn-error.log*
 .vscode/*
 !.vscode/extensions.json
 .idea
+
+project.txt
+Project_Report_and_Checklist.txt
+/supabase

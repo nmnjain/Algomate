@@ -6,7 +6,7 @@ import { Label } from "./ui/label"
 import { Github, Mail, Lock, ArrowLeft, Eye, EyeOff, Code2, Sparkles, Upload, FileText, User, X } from "lucide-react"
 import { useAuth } from '../contexts/AuthContext'
 import { useRouter } from './Router'
-import { toast } from "sonner@2.0.3"
+import { toast } from "sonner"
 
 export function SignupPage() {
   const [formData, setFormData] = useState({
@@ -18,40 +18,13 @@ export function SignupPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [resumeFile, setResumeFile] = useState<File | null>(null)
-  const [resumeUploading, setResumeUploading] = useState(false)
   
-  const { signUp, signInWithGitHub, uploadResume } = useAuth()
+  const { signUp } = useAuth()
   const { navigate } = useRouter()
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
-  }
-
-  const handleResumeUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      // Validate file type
-      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
-      if (!allowedTypes.includes(file.type)) {
-        toast.error('Please upload a PDF or Word document')
-        return
-      }
-      
-      // Validate file size (5MB max)
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('File size must be less than 5MB')
-        return
-      }
-      
-      setResumeFile(file)
-      toast.success('Resume selected successfully')
-    }
-  }
-
-  const removeResume = () => {
-    setResumeFile(null)
   }
 
   const handleEmailSignup = async (e: React.FormEvent) => {
@@ -71,25 +44,13 @@ export function SignupPage() {
 
     try {
       const { data, error } = await signUp(formData.email, formData.password, {
-        name: formData.name
+        full_name: formData.name
       })
       
       if (error) {
         toast.error(`Signup failed: ${error.message}`)
       } else if (data.user) {
         toast.success('Account created successfully!')
-        
-        // Upload resume if provided
-        if (resumeFile) {
-          setResumeUploading(true)
-          const resumeUrl = await uploadResume(resumeFile)
-          if (resumeUrl) {
-            toast.success('Resume uploaded successfully!')
-          } else {
-            toast.error('Resume upload failed, but account was created')
-          }
-          setResumeUploading(false)
-        }
         
         navigate('/dashboard')
       }
@@ -225,38 +186,7 @@ export function SignupPage() {
             </motion.p>
           </div>
 
-          {/* GitHub Signup */}
-          <motion.div
-            className="mb-6"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
-          >
-            <Button
-              onClick={handleGitHubSignup}
-              disabled={isLoading}
-              className="w-full bg-gray-800 hover:bg-gray-700 text-white border border-gray-600 glow-violet"
-              size="lg"
-            >
-              <Github size={20} className="mr-2" />
-              Sign up with GitHub
-            </Button>
-          </motion.div>
 
-          {/* Divider */}
-          <motion.div
-            className="relative my-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
-          >
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-background text-muted-foreground">or create account with email</span>
-            </div>
-          </motion.div>
 
           {/* Email Form */}
           <motion.form
@@ -348,48 +278,7 @@ export function SignupPage() {
               </div>
             </div>
 
-            {/* Resume Upload */}
-            <div className="space-y-2">
-              <Label className="text-foreground">Resume (Optional)</Label>
-              {!resumeFile ? (
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx"
-                    onChange={handleResumeUpload}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                  <div className="glassmorphism border-2 border-dashed border-border hover:border-primary transition-colors rounded-lg p-6 text-center">
-                    <Upload size={24} className="mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground mb-1">
-                      Click to upload your resume
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      PDF, DOC, or DOCX (max 5MB)
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="glassmorphism p-4 rounded-lg flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <FileText size={20} className="text-primary" />
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{resumeFile.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {(resumeFile.size / 1024 / 1024).toFixed(1)} MB
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={removeResume}
-                    className="text-muted-foreground hover:text-red-400 transition-colors"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
-              )}
-            </div>
+
 
             <div className="flex items-start gap-2 text-sm">
               <input
@@ -415,7 +304,7 @@ export function SignupPage() {
             >
               <Button
                 type="submit"
-                disabled={isLoading || resumeUploading}
+                disabled={isLoading}
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90 glow-cyan"
                 size="lg"
               >
@@ -423,11 +312,6 @@ export function SignupPage() {
                   <div className="flex items-center gap-2">
                     <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full" />
                     Creating account...
-                  </div>
-                ) : resumeUploading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full" />
-                    Uploading resume...
                   </div>
                 ) : (
                   'Create Account'

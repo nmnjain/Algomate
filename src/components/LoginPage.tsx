@@ -161,38 +161,7 @@ export function LoginPage() {
             </motion.p>
           </div>
 
-          {/* GitHub Login */}
-          <motion.div
-            className="mb-6"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
-          >
-            <Button
-              onClick={handleGitHubLogin}
-              disabled={isLoading}
-              className="w-full bg-gray-800 hover:bg-gray-700 text-white border border-gray-600 glow-violet"
-              size="lg"
-            >
-              <Github size={20} className="mr-2" />
-              Continue with GitHub
-            </Button>
-          </motion.div>
 
-          {/* Divider */}
-          <motion.div
-            className="relative my-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
-          >
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-background text-muted-foreground">or continue with email</span>
-            </div>
-          </motion.div>
 
           {/* Email Form */}
           <motion.form
