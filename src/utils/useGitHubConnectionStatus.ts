@@ -53,16 +53,7 @@ export function useGitHubConnectionStatus(): ConnectionStatus {
           session?.session?.user?.user_metadata?.provider_token
         );
 
-        // Check 2: Do we have a permanent connection record?
-        const { data: connection } = await supabase
-          .from('user_platform_connections')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('platform', 'github')
-          .eq('is_active', true)
-          .single();
-
-        // Check 3: Do we have recent cached data?
+        // Check 2: Do we have recent cached data?
         const { data: cachedData } = await supabase
           .from('user_platform_data')
           .select('last_updated')
@@ -74,8 +65,20 @@ export function useGitHubConnectionStatus(): ConnectionStatus {
           (new Date(cachedData.last_updated) > new Date(Date.now() - 24 * 60 * 60 * 1000)) : // 24 hours
           false;
 
+        // Check 3: Do we have a permanent connection record?
+        const { data: connection, error: connectionError } = await supabase
+          .from('user_platform_connections')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('platform', 'github')
+          .eq('is_active', true)
+          .single();
+
+        // Fallback: If connection table doesn't exist, use cached data as connection indicator
+        const isConnected = connection ? true : (cachedData && hasToken);
+
         setStatus({
-          isConnected: !!connection,
+          isConnected,
           hasValidToken: hasToken,
           hasRecentData,
           lastSyncAt: connection?.last_sync_at || null,
@@ -103,17 +106,16 @@ export function useGitHubActionStatus() {
     return { action: 'loading', label: 'Checking connection...', disabled: true };
   }
   
+  // If not connected at all, show connect button
   if (!connectionStatus.isConnected) {
     return { action: 'connect', label: 'Connect GitHub', disabled: false };
   }
   
-  if (!connectionStatus.hasValidToken) {
-    return { action: 'reconnect', label: 'Reconnect GitHub', disabled: false };
-  }
-  
+  // If connected but no recent data, show load data button
   if (!connectionStatus.hasRecentData) {
     return { action: 'sync', label: 'Load GitHub Data', disabled: false };
   }
   
+  // If everything is good, show refresh button
   return { action: 'refresh', label: 'Refresh Data', disabled: false };
 }

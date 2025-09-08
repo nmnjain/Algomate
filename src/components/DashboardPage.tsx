@@ -29,7 +29,6 @@ export function DashboardPage() {
     try {
       switch (actionStatus.action) {
         case 'connect':
-        case 'reconnect':
           const { error } = await signInWithGitHub();
           if (error) {
             toast.error(`GitHub connection failed: ${error.message}`);
