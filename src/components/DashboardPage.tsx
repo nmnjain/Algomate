@@ -6,13 +6,14 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from "sonner";
 import { useGitHubData } from '../utils/useGitHubData';
 import { useGitHubConnectionStatus, useGitHubActionStatus } from '../utils/useGitHubConnectionStatus'
+import GitHubHeatmap from './GitHubHeatmap'
 
 export function DashboardPage() {
   const { user, signOut, signInWithGitHub } = useAuth()
   const navigate = useNavigate()
   const { data: githubData, loading: githubLoading, backgroundRefreshing, error: githubError, cacheInfo, refetch, fetchInitial } = useGitHubData()
   const connectionStatus = useGitHubConnectionStatus()
-  const actionStatus = useGitHubActionStatus()
+  const actionStatus = useGitHubActionStatus(githubError)
 
   const handleSignOut = async () => {
     try {
@@ -33,11 +34,20 @@ export function DashboardPage() {
     try {
       switch (actionStatus.action) {
         case 'connect':
+          // Clear any error state when reconnecting
+          if (githubError === 'github_token_expired') {
+            toast.info('Reconnecting GitHub account...');
+          }
+          
           const { error } = await signInWithGitHub();
           if (error) {
             toast.error(`GitHub connection failed: ${error.message}`);
           } else {
-            toast.success('GitHub account connected successfully!');
+            if (githubError === 'github_token_expired') {
+              toast.success('GitHub account reconnected successfully!');
+            } else {
+              toast.success('GitHub account connected successfully!');
+            }
             // Fetch fresh data after successful connection
             setTimeout(() => {
               fetchInitial();
@@ -53,8 +63,31 @@ export function DashboardPage() {
           
         case 'refresh':
           toast.info('Refreshing GitHub data...');
-          await refetch();
-          toast.success('GitHub data refreshed successfully!');
+          try {
+            await refetch();
+            toast.success('GitHub data refreshed successfully!');
+          } catch (error: any) {
+            // If token expired during refresh, automatically redirect to OAuth
+            if (error?.message === 'GITHUB_TOKEN_EXPIRED' || 
+                error?.message?.includes('token expired') ||
+                error?.message?.includes('token not found')) {
+              toast.info('GitHub token expired. Reconnecting...');
+              
+              const { error: oauthError } = await signInWithGitHub();
+              if (oauthError) {
+                toast.error(`GitHub reconnection failed: ${oauthError.message}`);
+              } else {
+                toast.success('GitHub reconnected! Fetching fresh data...');
+                // Fetch fresh data after successful reconnection
+                setTimeout(() => {
+                  fetchInitial();
+                }, 2000);
+              }
+            } else {
+              toast.error('Failed to refresh GitHub data');
+              throw error; // Re-throw if it's not a token error
+            }
+          }
           break;
       }
     } catch (error) {
@@ -191,11 +224,14 @@ export function DashboardPage() {
             <h3 className="text-xl font-semibold mb-4 text-foreground">
               {actionStatus.action === 'loading' ? 'Checking Connection' : 
                hasGitHubData ? 'GitHub Connected' : 
+               githubError === 'github_token_expired' ? 'GitHub Token Expired' :
                connectionStatus.isConnected ? 'GitHub Connected' : 'Connect GitHub'}
             </h3>
             <p className="text-muted-foreground mb-6">
               {hasGitHubData 
                 ? `Connected as ${githubData.profile.login}. Your repositories and stats are displayed above.`
+                : githubError === 'github_token_expired'
+                ? 'Your GitHub access token has expired. Please reconnect to refresh your data.'
                 : connectionStatus.isConnected
                 ? 'GitHub account connected. Click below to load your repository data.'
                 : 'Sync your repositories and showcase your coding projects automatically.'
@@ -367,6 +403,16 @@ export function DashboardPage() {
               </div>
             )}
           </div>
+
+          {/* GitHub Activity Heatmap */}
+          {hasGitHubData && githubData.activityData && githubData.activitySummary ? (
+            <div className="lg:col-span-2">
+              <GitHubHeatmap 
+                activityData={githubData.activityData}
+                activitySummary={githubData.activitySummary}
+              />
+            </div>
+          ) : null}
         </motion.div>
       </main>
     </div>

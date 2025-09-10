@@ -99,7 +99,7 @@ export function useGitHubConnectionStatus(): ConnectionStatus {
 }
 
 // Helper hook for determining what action to show
-export function useGitHubActionStatus() {
+export function useGitHubActionStatus(githubError?: string | null) {
   const connectionStatus = useGitHubConnectionStatus();
   
   if (connectionStatus.loading) {
@@ -111,11 +111,6 @@ export function useGitHubActionStatus() {
     return { action: 'connect', label: 'Connect GitHub', disabled: false };
   }
   
-  // If connected but no recent data, show load data button
-  if (!connectionStatus.hasRecentData) {
-    return { action: 'sync', label: 'Load GitHub Data', disabled: false };
-  }
-  
-  // If everything is good, show refresh button
+  // If connected, always show refresh data (handles token expiration internally)
   return { action: 'refresh', label: 'Refresh Data', disabled: false };
 }

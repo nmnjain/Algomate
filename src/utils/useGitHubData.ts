@@ -73,9 +73,12 @@ export function useGitHubData() {
                   user?.user_metadata?.provider_access_token ||
                   session?.session?.user?.user_metadata?.provider_token;
     
+    // GitHub OAuth tokens cannot be refreshed programmatically
+    // The user must go through the complete OAuth flow again
     if (!token) {
-      throw new Error('GitHub token not found. Please reconnect your GitHub account.');
+      throw new Error('GITHUB_TOKEN_EXPIRED');
     }
+    
     return token;
   };
 
@@ -208,6 +211,16 @@ export function useGitHubData() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch GitHub data';
       console.error('GitHub data fetch error:', err);
+      
+      // Set different error states based on the error type
+      if (errorMessage === 'GITHUB_TOKEN_EXPIRED') {
+        setError('github_token_expired');
+      } else if (errorMessage.includes('token expired') || errorMessage.includes('token not found')) {
+        setError('github_token_expired');
+      } else {
+        setError(errorMessage);
+      }
+      
       throw new Error(errorMessage);
     }
   };
@@ -246,7 +259,11 @@ export function useGitHubData() {
       }
     } catch (err) {
       console.error('Error refreshing data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to refresh data');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to refresh data';
+      setError(errorMessage);
+      
+      // Re-throw the error so it can be caught by the calling function
+      throw err;
     } finally {
       setLoading(false);
     }

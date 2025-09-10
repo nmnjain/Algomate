@@ -6,6 +6,36 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Helper functions for streak calculations
+function calculateCurrentStreak(activityData: any[]): number {
+  let streak = 0
+  // Start from the most recent day and work backwards
+  for (let i = activityData.length - 1; i >= 0; i--) {
+    if (activityData[i].count > 0) {
+      streak++
+    } else {
+      break
+    }
+  }
+  return streak
+}
+
+function calculateLongestStreak(activityData: any[]): number {
+  let maxStreak = 0
+  let currentStreak = 0
+  
+  activityData.forEach(day => {
+    if (day.count > 0) {
+      currentStreak++
+      maxStreak = Math.max(maxStreak, currentStreak)
+    } else {
+      currentStreak = 0
+    }
+  })
+  
+  return maxStreak
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -75,6 +105,46 @@ serve(async (req) => {
     })
     const repos = await reposResponse.json()
 
+    // Fetch user events for activity heatmap
+    const eventsResponse = await fetch(`https://api.github.com/users/${githubUsername}/events?per_page=100`, {
+      headers: {
+        'Authorization': `token ${githubToken}`,
+        'Accept': 'application/vnd.github.v3+json',
+      },
+    })
+    const events = await eventsResponse.json()
+
+    // Process events for heatmap data
+    const activityMap = new Map()
+    const now = new Date()
+    const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())
+
+    // Initialize activity map for the past year
+    for (let d = new Date(oneYearAgo); d <= now; d.setDate(d.getDate() + 1)) {
+      const dateKey = d.toISOString().split('T')[0]
+      activityMap.set(dateKey, 0)
+    }
+
+    // Count activities by date
+    if (Array.isArray(events)) {
+      events.forEach((event: any) => {
+        const eventDate = new Date(event.created_at)
+        if (eventDate >= oneYearAgo) {
+          const dateKey = eventDate.toISOString().split('T')[0]
+          if (activityMap.has(dateKey)) {
+            activityMap.set(dateKey, activityMap.get(dateKey) + 1)
+          }
+        }
+      })
+    }
+
+    // Convert activity map to array format for frontend
+    const activityData = Array.from(activityMap.entries()).map(([date, count]) => ({
+      date,
+      count,
+      level: count === 0 ? 0 : count < 2 ? 1 : count < 5 ? 2 : count < 10 ? 3 : 4
+    }))
+
     // Fetch contribution stats (simplified version)
     const contributionsResponse = await fetch(`https://api.github.com/search/commits?q=author:${githubUsername}&sort=author-date&per_page=1`, {
       headers: {
@@ -121,6 +191,14 @@ serve(async (req) => {
         updated_at: repo.updated_at,
         html_url: repo.html_url,
       })),
+      activityData: activityData,
+      activitySummary: {
+        totalDaysActive: activityData.filter(day => day.count > 0).length,
+        maxDailyActivity: Math.max(...activityData.map(day => day.count)),
+        avgDailyActivity: activityData.reduce((sum, day) => sum + day.count, 0) / activityData.length,
+        currentStreak: calculateCurrentStreak(activityData),
+        longestStreak: calculateLongestStreak(activityData),
+      }
     }
 
     // Cache the data in our database
