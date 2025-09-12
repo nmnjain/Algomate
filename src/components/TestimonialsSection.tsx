@@ -4,7 +4,7 @@ import { Star, Quote } from "lucide-react";
 const testimonials = [
   {
     id: 1,
-    name: "Sarah Chen",
+    name: "Ayush Kakkar",
     role: "Full Stack Developer",
     company: "Meta",
     testimonial: "Algomate helped me showcase my projects in a way that finally got me noticed by top tech companies.",
