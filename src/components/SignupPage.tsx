@@ -73,10 +73,8 @@ export function SignupPage() {
   //     // Note: If successful, user will be redirected to GitHub and back
   //   } catch (error) {
   //     toast.error('GitHub signup failed')
-  //     console.error('GitHub signup error:', error)
-  //     setIsLoading(false)
-  //   }
   // }
+
 
   return (
     <div className="dark min-h-screen bg-background text-foreground gradient-mesh flex items-center justify-center relative overflow-hidden py-12">

@@ -45,10 +45,27 @@ interface GitHubStats {
   topLanguages: [string, number][];
 }
 
+interface ActivityDay {
+  date: string;
+  count: number;
+  level: number; // 0-4 scale for intensity
+}
+
+interface ActivitySummary {
+  totalActivity: number;
+  totalDaysActive: number;
+  maxDailyActivity: number;
+  avgDailyActivity: number;
+  currentStreak: number;
+  longestStreak: number;
+}
+
 interface GitHubData {
   profile: GitHubProfile;
   stats: GitHubStats;
   recentRepos: ProcessedGitHubRepo[];
+  activityData?: ActivityDay[];
+  activitySummary?: ActivitySummary;
 }
 
 export function useGitHubData() {
@@ -118,6 +135,165 @@ export function useGitHubData() {
       .slice(0, 5);
   };
 
+  const fetchGitHubActivity = async (token: string, username: string): Promise<{ activityData: ActivityDay[], activitySummary: ActivitySummary }> => {
+    try {
+      // Fetch user events from GitHub API (up to 300 recent events)
+      const events = await fetchFromGitHub(`/users/${username}/events?per_page=100`, token);
+      
+      // Get the last 365 days
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 365);
+      
+      // Initialize activity map for all days in the past year
+      const activityMap: { [key: string]: number } = {};
+      const currentDate = new Date(startDate);
+      
+      while (currentDate <= endDate) {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        activityMap[dateStr] = 0;
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      // Count activities by date
+      let totalActivity = 0;
+      events.forEach((event: any) => {
+        const eventDate = new Date(event.created_at);
+        const dateStr = eventDate.toISOString().split('T')[0];
+        
+        // Only count relevant activity types
+        const relevantTypes = [
+          'PushEvent',
+          'PullRequestEvent', 
+          'IssuesEvent',
+          'CreateEvent',
+          'ReleaseEvent',
+          'ForkEvent',
+          'WatchEvent',
+          'IssueCommentEvent',
+          'PullRequestReviewEvent'
+        ];
+        
+        if (relevantTypes.includes(event.type) && activityMap.hasOwnProperty(dateStr)) {
+          // Weight different event types differently
+          let weight = 1;
+          switch (event.type) {
+            case 'PushEvent':
+              weight = event.payload?.size || 1; // Number of commits in push
+              break;
+            case 'PullRequestEvent':
+              weight = 3;
+              break;
+            case 'CreateEvent':
+              weight = 2;
+              break;
+            case 'ReleaseEvent':
+              weight = 4;
+              break;
+            default:
+              weight = 1;
+          }
+          
+          activityMap[dateStr] += weight;
+          totalActivity += weight;
+        }
+      });
+      
+      // Convert to ActivityDay array and calculate levels
+      const activityData: ActivityDay[] = [];
+      const activityCounts = Object.values(activityMap);
+      const maxActivity = Math.max(...activityCounts);
+      
+      Object.entries(activityMap).forEach(([date, count]) => {
+        // Calculate intensity level (0-4)
+        let level = 0;
+        if (count > 0) {
+          if (maxActivity <= 1) {
+            level = count > 0 ? 1 : 0;
+          } else {
+            const percentage = count / maxActivity;
+            if (percentage >= 0.75) level = 4;
+            else if (percentage >= 0.5) level = 3;
+            else if (percentage >= 0.25) level = 2;
+            else level = 1;
+          }
+        }
+        
+        activityData.push({ date, count, level });
+      });
+      
+      // Calculate statistics
+      const activeDays = activityData.filter(day => day.count > 0);
+      const totalDaysActive = activeDays.length;
+      const maxDailyActivity = Math.max(...activityCounts);
+      const avgDailyActivity = totalDaysActive > 0 ? totalActivity / totalDaysActive : 0;
+      
+      // Calculate streaks
+      let currentStreak = 0;
+      let longestStreak = 0;
+      let tempStreak = 0;
+      
+      // Start from most recent day and work backwards for current streak
+      const sortedData = [...activityData].reverse();
+      for (let i = 0; i < sortedData.length; i++) {
+        if (sortedData[i].count > 0) {
+          tempStreak++;
+          if (i === currentStreak) {
+            currentStreak = tempStreak;
+          }
+        } else {
+          if (i === currentStreak) {
+            currentStreak = 0;
+          }
+          tempStreak = 0;
+        }
+        longestStreak = Math.max(longestStreak, tempStreak);
+      }
+      
+      const activitySummary: ActivitySummary = {
+        totalActivity,
+        totalDaysActive,
+        maxDailyActivity,
+        avgDailyActivity,
+        currentStreak,
+        longestStreak
+      };
+      
+      return { activityData: activityData.sort((a, b) => a.date.localeCompare(b.date)), activitySummary };
+      
+    } catch (error) {
+      console.error('Error fetching GitHub activity:', error);
+      // Return empty activity data if fetch fails
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 365);
+      
+      const emptyActivityData: ActivityDay[] = [];
+      const currentDate = new Date(startDate);
+      
+      while (currentDate <= endDate) {
+        emptyActivityData.push({
+          date: currentDate.toISOString().split('T')[0],
+          count: 0,
+          level: 0
+        });
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      return {
+        activityData: emptyActivityData,
+        activitySummary: {
+          totalActivity: 0,
+          totalDaysActive: 0,
+          maxDailyActivity: 0,
+          avgDailyActivity: 0,
+          currentStreak: 0,
+          longestStreak: 0
+        }
+      };
+    }
+  };
+
   const loadCachedData = async () => {
     if (!user) return null;
 
@@ -130,7 +306,7 @@ export function useGitHubData() {
         .single();
 
       if (error) {
-        console.log('No cached GitHub data found');
+        // No cached GitHub data found
         return null;
       }
 
@@ -157,7 +333,7 @@ export function useGitHubData() {
       if (error) {
         console.error('Error saving cached data:', error);
       } else {
-        console.log('GitHub data cached successfully at:', new Date().toISOString());
+        // GitHub data cached successfully
       }
     } catch (err) {
       console.error('Error saving cached data:', err);
@@ -198,6 +374,9 @@ export function useGitHubData() {
           html_url: repo.html_url,
         }));
 
+      // Fetch activity data
+      const { activityData, activitySummary } = await fetchGitHubActivity(token, profile.login);
+
       const githubData: GitHubData = {
         profile: {
           login: profile.login,
@@ -217,6 +396,8 @@ export function useGitHubData() {
           topLanguages,
         },
         recentRepos,
+        activityData,
+        activitySummary,
       };
 
       // Save to cache
@@ -281,7 +462,7 @@ export function useGitHubData() {
                   });
                 }
               } catch (err) {
-                console.log('Background refresh failed:', err);
+                // Background refresh failed
               } finally {
                 setBackgroundRefreshing(false);
               }
