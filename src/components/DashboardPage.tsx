@@ -1,17 +1,35 @@
 import { motion } from "motion/react"
 import { Button } from "./ui/button"
-import { Code2, LogOut, Github, Mail, FileText, Trophy, Activity, Star, GitBranch, Users } from "lucide-react"
+import { Code2, LogOut, Github, Mail, FileText, Trophy, Activity, Star, GitBranch, Users, Code, Target } from "lucide-react"
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import { toast } from "sonner";
 import { useGitHubData } from '../utils/useGitHubData';
 import { useGitHubConnectionStatus, useGitHubActionStatus } from '../utils/useGitHubConnectionStatus'
+import { useLeetCodeData } from '../utils/useLeetCodeData';
 import GitHubHeatmap from './GitHubHeatmap'
+import { LeetCodeDashboard } from './LeetCodeDashboard'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 
 export function DashboardPage() {
   const { user, signOut, signInWithGitHub } = useAuth()
   const navigate = useNavigate()
+  
+  // Persistent main tab state
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const saved = localStorage.getItem('dashboard-main-tab');
+    return saved || 'github';
+  });
+
+  // Handle main tab changes with persistence
+  const handleMainTabChange = (newTab: string) => {
+    setActiveTab(newTab);
+    localStorage.setItem('dashboard-main-tab', newTab);
+  };
+
   const { data: githubData, loading: githubLoading, backgroundRefreshing, error: githubError, cacheInfo, refetch, fetchInitial } = useGitHubData()
+  const { data: leetcodeData, loading: leetcodeLoading, username: leetcodeUsername } = useLeetCodeData()
   const connectionStatus = useGitHubConnectionStatus()
   const actionStatus = useGitHubActionStatus(githubError)
 
@@ -98,12 +116,15 @@ export function DashboardPage() {
 
   // Determine if user has GitHub data to display
   const hasGitHubData = githubData && !githubError;
+  const hasLeetCodeData = leetcodeData && leetcodeUsername;
 
   const stats = hasGitHubData ? [
     { icon: GitBranch, label: "Repositories", value: githubData.stats.totalRepos.toString(), color: "text-primary" },
     { icon: Star, label: "Total Stars", value: githubData.stats.totalStars.toString(), color: "text-secondary" },
     { icon: Activity, label: "Commits", value: githubData.stats.totalCommits.toString(), color: "text-accent" },
-    { icon: Users, label: "Followers", value: githubData.profile.followers.toString(), color: "text-green-400" }
+    hasLeetCodeData 
+      ? { icon: Target, label: "LeetCode Solved", value: leetcodeData.stats.totalSolved.toString(), color: "text-orange-400" }
+      : { icon: Users, label: "Followers", value: githubData.profile.followers.toString(), color: "text-green-400" }
   ] : [
     { icon: Activity, label: "Coding Streak", value: "0 days", color: "text-primary" },
     { icon: Star, label: "Total Points", value: "0", color: "text-secondary" },
@@ -206,7 +227,7 @@ export function DashboardPage() {
 
         {/* Quick Actions */}
         <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12"
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
@@ -281,6 +302,57 @@ export function DashboardPage() {
             </Button>
           </motion.div>
 
+          {/* Connect LeetCode */}
+          <motion.div
+            className="glassmorphism p-8 rounded-2xl group hover:scale-105 transition-all duration-300"
+            whileHover={{ y: -10 }}
+          >
+            <Code size={48} className={`mb-6 group-hover:scale-110 transition-transform ${
+              hasLeetCodeData ? 'text-orange-400' : 
+              leetcodeUsername ? 'text-blue-400' : 
+              'text-gray-400 group-hover:text-white'
+            }`} />
+            <h3 className="text-xl font-semibold mb-4 text-foreground">
+              {leetcodeLoading ? 'Loading LeetCode' : 
+               hasLeetCodeData ? 'LeetCode Connected' : 
+               leetcodeUsername ? 'LeetCode Username Set' : 'Connect LeetCode'}
+            </h3>
+            <p className="text-muted-foreground mb-6">
+              {hasLeetCodeData 
+                ? `Connected as ${leetcodeUsername}. View your problem-solving stats in the LeetCode tab.`
+                : leetcodeUsername 
+                ? 'LeetCode username configured. Switch to the LeetCode tab to view your stats.'
+                : 'Track your algorithmic problem-solving progress and coding interview prep.'
+              }
+            </p>
+            
+            {hasLeetCodeData && (
+              <div className="text-xs text-muted-foreground mb-4 p-2 bg-muted/20 rounded">
+                <div className="flex items-center justify-between">
+                  <span>Problems Solved: {leetcodeData.stats.totalSolved}</span>
+                  <span>Ranking: {leetcodeData.stats.ranking > 0 ? leetcodeData.stats.ranking.toLocaleString() : 'Unrated'}</span>
+                </div>
+              </div>
+            )}
+            
+            <Button 
+              className={`w-full ${
+                hasLeetCodeData ? 'bg-orange-600 hover:bg-orange-700' :
+                leetcodeUsername ? 'bg-blue-600 hover:bg-blue-700' :
+                'bg-gray-800 hover:bg-gray-700'
+              } text-white`}
+              onClick={() => {
+                // Navigate to LeetCode tab
+                handleMainTabChange("leetcode")
+              }}
+              disabled={leetcodeLoading}
+            >
+              {leetcodeLoading ? 'Loading...' : 
+               hasLeetCodeData ? 'View LeetCode Stats' :
+               leetcodeUsername ? 'Check LeetCode Data' : 'Set LeetCode Username'}
+            </Button>
+          </motion.div>
+
           {/* Upload Resume */}
           <motion.div
             className="glassmorphism p-8 rounded-2xl group hover:scale-105 transition-all duration-300"
@@ -312,107 +384,133 @@ export function DashboardPage() {
           </motion.div>
         </motion.div>
 
-        {/* Recent Activity */}
+        {/* Platform Tabs - GitHub and LeetCode Data */}
         <motion.div
-          className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12"
+          className="mb-12"
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
         >
-          {/* Recent Repositories */}
-          <div className="glassmorphism p-8 rounded-2xl">
-            <h2 className="text-2xl font-semibold mb-6 text-foreground">Recent Repositories</h2>
-            {hasGitHubData ? (
-              <div className="space-y-4">
-                {githubData.recentRepos.map((repo, index) => (
-                  <motion.div
-                    key={repo.name}
-                    className="p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-foreground hover:text-primary">
-                          <a href={repo.html_url} target="_blank" rel="noopener noreferrer">
-                            {repo.name}
-                          </a>
-                        </h3>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {repo.description || "No description available"}
-                        </p>
-                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                          {repo.language && (
-                            <span className="flex items-center gap-1">
-                              <div className="w-2 h-2 rounded-full bg-primary"></div>
-                              {repo.language}
-                            </span>
-                          )}
-                          <span className="flex items-center gap-1">
-                            <Star size={12} />
-                            {repo.stars}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <GitBranch size={12} />
-                            {repo.forks}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Github size={48} className="mx-auto mb-4 text-muted-foreground/50" />
-                <p className="text-muted-foreground">
-                  {githubLoading ? "Loading repositories..." : "Connect GitHub to see your repositories"}
-                </p>
-              </div>
-            )}
-          </div>
+          <Tabs value={activeTab} onValueChange={handleMainTabChange} className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2 glassmorphism">
+              <TabsTrigger value="github" className="flex items-center gap-2">
+                <Github className="h-4 w-4" />
+                GitHub
+                {hasGitHubData && (
+                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="leetcode" className="flex items-center gap-2">
+                <Code className="h-4 w-4" />
+                LeetCode
+                {hasLeetCodeData && (
+                  <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+                )}
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Top Languages */}
-          <div className="glassmorphism p-8 rounded-2xl">
-            <h2 className="text-2xl font-semibold mb-6 text-foreground">Top Languages</h2>
-            {hasGitHubData && githubData.stats.topLanguages.length > 0 ? (
-              <div className="space-y-4">
-                {githubData.stats.topLanguages.map(([language, count], index) => (
-                  <motion.div
-                    key={language}
-                    className="flex items-center justify-between"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 rounded-full bg-gradient-to-r from-primary to-secondary"></div>
-                      <span className="font-medium text-foreground">{language}</span>
+            <TabsContent value="github" className="space-y-8">
+              {/* GitHub Content */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Recent Repositories */}
+                <div className="glassmorphism p-8 rounded-2xl">
+                  <h2 className="text-2xl font-semibold mb-6 text-foreground">Recent Repositories</h2>
+                  {hasGitHubData ? (
+                    <div className="space-y-4">
+                      {githubData.recentRepos.map((repo, index) => (
+                        <motion.div
+                          key={repo.name}
+                          className="p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-foreground hover:text-primary">
+                                <a href={repo.html_url} target="_blank" rel="noopener noreferrer">
+                                  {repo.name}
+                                </a>
+                              </h3>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {repo.description || "No description available"}
+                              </p>
+                              <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                                {repo.language && (
+                                  <span className="flex items-center gap-1">
+                                    <div className="w-2 h-2 rounded-full bg-primary"></div>
+                                    {repo.language}
+                                  </span>
+                                )}
+                                <span className="flex items-center gap-1">
+                                  <Star size={12} />
+                                  {repo.stars}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <GitBranch size={12} />
+                                  {repo.forks}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
                     </div>
-                    <span className="text-sm text-muted-foreground">{count} repos</span>
-                  </motion.div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Code2 size={48} className="mx-auto mb-4 text-muted-foreground/50" />
-                <p className="text-muted-foreground">
-                  {githubLoading ? "Loading languages..." : "Connect GitHub to see your top languages"}
-                </p>
-              </div>
-            )}
-          </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Github size={48} className="mx-auto mb-4 text-muted-foreground/50" />
+                      <p className="text-muted-foreground">
+                        {githubLoading ? "Loading repositories..." : "Connect GitHub to see your repositories"}
+                      </p>
+                    </div>
+                  )}
+                </div>
 
-          {/* GitHub Activity Heatmap */}
-          {hasGitHubData && githubData.activityData && githubData.activitySummary ? (
-            <div className="lg:col-span-2">
-              <GitHubHeatmap 
-                activityData={githubData.activityData}
-                activitySummary={githubData.activitySummary}
-              />
-            </div>
-          ) : null}
+                {/* Top Languages */}
+                <div className="glassmorphism p-8 rounded-2xl">
+                  <h2 className="text-2xl font-semibold mb-6 text-foreground">Top Languages</h2>
+                  {hasGitHubData && githubData.stats.topLanguages.length > 0 ? (
+                    <div className="space-y-4">
+                      {githubData.stats.topLanguages.map(([language, count], index) => (
+                        <motion.div
+                          key={language}
+                          className="flex items-center justify-between"
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-3 h-3 rounded-full bg-gradient-to-r from-primary to-secondary"></div>
+                            <span className="font-medium text-foreground">{language}</span>
+                          </div>
+                          <span className="text-sm text-muted-foreground">{count} repos</span>
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Code2 size={48} className="mx-auto mb-4 text-muted-foreground/50" />
+                      <p className="text-muted-foreground">
+                        {githubLoading ? "Loading languages..." : "Connect GitHub to see your top languages"}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* GitHub Activity Heatmap */}
+              {hasGitHubData && githubData.activityData && githubData.activitySummary && (
+                <GitHubHeatmap 
+                  activityData={githubData.activityData}
+                  activitySummary={githubData.activitySummary}
+                />
+              )}
+            </TabsContent>
+
+            <TabsContent value="leetcode">
+              <LeetCodeDashboard />
+            </TabsContent>
+          </Tabs>
         </motion.div>
       </main>
     </div>

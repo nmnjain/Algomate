@@ -120,11 +120,11 @@ export function useGitHubData() {
 
   const fetchGitHubActivity = async (token: string, username: string): Promise<{ activityData: ActivityDay[], activitySummary: ActivitySummary }> => {
     try {
-      // Use GitHub's GraphQL API to get real contribution data
+      // Use GitHub's GraphQL API to get real contribution data for 2025
       const query = `
-        query($username: String!) {
+        query($username: String!, $from: DateTime!, $to: DateTime!) {
           user(login: $username) {
-            contributionsCollection {
+            contributionsCollection(from: $from, to: $to) {
               contributionCalendar {
                 totalContributions
                 weeks {
@@ -139,6 +139,10 @@ export function useGitHubData() {
         }
       `;
 
+      // Set date range for full 2025 year
+      const from = '2025-01-01T00:00:00Z';
+      const to = '2025-12-31T23:59:59Z';
+
       const graphqlResponse = await fetch('https://api.github.com/graphql', {
         method: 'POST',
         headers: {
@@ -147,7 +151,11 @@ export function useGitHubData() {
         },
         body: JSON.stringify({
           query,
-          variables: { username }
+          variables: { 
+            username,
+            from,
+            to
+          }
         })
       });
 
@@ -168,7 +176,7 @@ export function useGitHubData() {
       }
 
       // Process the real GitHub contribution data
-      const activityData: ActivityDay[] = [];
+      const contributionDataFromAPI: ActivityDay[] = [];
       let totalContributions = 0;
       
       // Flatten the weeks and days into a single array
@@ -186,7 +194,7 @@ export function useGitHubData() {
             else level = 1;
           }
           
-          activityData.push({
+          contributionDataFromAPI.push({
             date: day.date,
             count,
             level
@@ -194,7 +202,33 @@ export function useGitHubData() {
         });
       });
 
-      // Calculate statistics from real data
+      // Generate full 2025 calendar and fill in with API data
+      const activityData: ActivityDay[] = [];
+      const startDate = new Date('2025-01-01');
+      const endDate = new Date('2025-12-31');
+      
+      // Create a map for fast lookup of API data
+      const apiDataMap = new Map();
+      contributionDataFromAPI.forEach(day => {
+        apiDataMap.set(day.date, day);
+      });
+      
+      // Generate full year calendar
+      const currentDate = new Date(startDate);
+      while (currentDate <= endDate) {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        const apiDay = apiDataMap.get(dateStr);
+        
+        activityData.push({
+          date: dateStr,
+          count: apiDay ? apiDay.count : 0,
+          level: apiDay ? apiDay.level : 0
+        });
+        
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      // Calculate statistics from processed data
       const activeDays = activityData.filter(day => day.count > 0);
       const totalDaysActive = activeDays.length;
       const maxDailyActivity = Math.max(...activityData.map(day => day.count));
@@ -244,108 +278,16 @@ export function useGitHubData() {
       
     } catch (error) {
       // Error fetching GitHub GraphQL activity
+      console.warn('GitHub GraphQL API failed, using fallback approach:', error);
       
-      // Fallback to REST API approach if GraphQL fails
+      // Fallback: Generate empty 2025 calendar
       try {
-        
-        // Get the last 365 days for a full year view
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - 365);
-        
-        // Initialize activity map
-        const activityMap: { [key: string]: number } = {};
-        const currentDate = new Date(startDate);
-        
-        while (currentDate <= endDate) {
-          const dateStr = currentDate.toISOString().split('T')[0];
-          activityMap[dateStr] = 0;
-          currentDate.setDate(currentDate.getDate() + 1);
-        }
-        
-        let totalContributions = 0;
-        
-        // Try to get recent events for basic activity estimation
-        try {
-          const events = await fetchFromGitHub(`/users/${username}/events?per_page=100`, token);
-          
-          events.forEach((event: any) => {
-            const eventDate = new Date(event.created_at);
-            if (eventDate >= startDate && eventDate <= endDate) {
-              const dateStr = eventDate.toISOString().split('T')[0];
-              if (activityMap.hasOwnProperty(dateStr)) {
-                let weight = 1;
-                switch (event.type) {
-                  case 'PushEvent':
-                    weight = event.payload?.commits?.length || 1;
-                    break;
-                  case 'CreateEvent':
-                    weight = 2;
-                    break;
-                  case 'PullRequestEvent':
-                    weight = 3;
-                    break;
-                  default:
-                    weight = 1;
-                }
-                activityMap[dateStr] += weight;
-                totalContributions += weight;
-              }
-            }
-          });
-        } catch (eventsError) {
-          // Events API also unavailable
-        }
-        
-        // Convert to ActivityDay array
-        const activityData: ActivityDay[] = [];
-        const activityCounts = Object.values(activityMap);
-        const maxActivity = Math.max(...activityCounts, 1);
-        
-        Object.entries(activityMap).forEach(([date, count]) => {
-          let level = 0;
-          if (count > 0) {
-            const percentage = count / maxActivity;
-            if (percentage >= 0.8) level = 4;
-            else if (percentage >= 0.6) level = 3;
-            else if (percentage >= 0.4) level = 2;
-            else level = 1;
-          }
-          
-          activityData.push({ date, count, level });
-        });
-        
-        // Calculate basic statistics
-        const activeDays = activityData.filter(day => day.count > 0);
-        const totalDaysActive = activeDays.length;
-        const maxDailyActivity = Math.max(...activityCounts);
-        const avgDailyActivity = totalDaysActive > 0 ? totalContributions / totalDaysActive : 0;
-        
-        const activitySummary: ActivitySummary = {
-          totalActivity: totalContributions,
-          totalDaysActive,
-          maxDailyActivity,
-          avgDailyActivity,
-          currentStreak: 0,
-          longestStreak: 0
-        };
-        
-        return { 
-          activityData: activityData.sort((a, b) => a.date.localeCompare(b.date)), 
-          activitySummary 
-        };
-        
-      } catch (fallbackError) {
-        // Both GraphQL and REST API failed, return empty data
-        
-        // Return empty data with proper date range
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - 365);
-        
+        // Generate full 2025 calendar with empty data
         const emptyActivityData: ActivityDay[] = [];
-        const currentDate = new Date(startDate);
+        const startDate = new Date('2025-01-01');
+        const endDate = new Date('2025-12-31');
         
+        const currentDate = new Date(startDate);
         while (currentDate <= endDate) {
           emptyActivityData.push({
             date: currentDate.toISOString().split('T')[0],
@@ -354,7 +296,7 @@ export function useGitHubData() {
           });
           currentDate.setDate(currentDate.getDate() + 1);
         }
-        
+
         return {
           activityData: emptyActivityData,
           activitySummary: {
@@ -366,6 +308,10 @@ export function useGitHubData() {
             longestStreak: 0
           }
         };
+        
+      } catch (fallbackError) {
+        console.error('GitHub fallback generation failed:', fallbackError);
+        throw new Error('Failed to generate GitHub activity data');
       }
     }
   };

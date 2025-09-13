@@ -2,35 +2,46 @@ import React, { useState, useRef } from 'react';
 import { motion } from 'motion/react';
 import TooltipPortal from './ui/tooltip-portal';
 
-interface ActivityDay {
+interface LeetCodeActivityDay {
   date: string;
-  count: number;
+  submissionCount: number;
   level: number; // 0-4 scale for intensity
 }
 
-interface ActivitySummary {
-  totalActivity: number;
+interface LeetCodeActivitySummary {
+  totalSubmissions: number;
   totalDaysActive: number;
-  maxDailyActivity: number;
-  avgDailyActivity: number;
+  maxDailySubmissions: number;
+  avgDailySubmissions: number;
   currentStreak: number;
   longestStreak: number;
 }
 
-interface GitHubHeatmapProps {
-  activityData: ActivityDay[];
-  activitySummary: ActivitySummary;
+interface LeetCodeHeatmapProps {
+  activityData: LeetCodeActivityDay[];
+  activitySummary: LeetCodeActivitySummary;
 }
 
-const GitHubHeatmap: React.FC<GitHubHeatmapProps> = ({ activityData, activitySummary }) => {
-  const [hoveredDay, setHoveredDay] = useState<ActivityDay | null>(null);
+const LeetCodeHeatmap: React.FC<LeetCodeHeatmapProps> = ({ activityData, activitySummary }) => {
+  const [hoveredDay, setHoveredDay] = useState<LeetCodeActivityDay | null>(null);
   const [hoveredElement, setHoveredElement] = useState<HTMLElement | null>(null);
   const hoveredElementRef = useRef<HTMLElement>(null);
 
-  // Group data by weeks for heatmap display (GitHub-style) - same as LeetCode
-  const groupByWeeks = (data: ActivityDay[]) => {
-    const weeks: ActivityDay[][] = [];
-    let currentWeek: ActivityDay[] = [];
+  // Ensure we have valid data
+  if (!activityData || activityData.length === 0) {
+    return (
+      <div className="bg-gray-900 border border-gray-700 rounded-lg p-4" style={{ backgroundColor: '#0d1117', borderColor: '#30363d' }}>
+        <div className="text-center text-gray-500 py-8">
+          No activity data available
+        </div>
+      </div>
+    );
+  }
+
+  // Group data by weeks for heatmap display (GitHub-style)
+  const groupByWeeks = (data: LeetCodeActivityDay[]) => {
+    const weeks: LeetCodeActivityDay[][] = [];
+    let currentWeek: LeetCodeActivityDay[] = [];
     
     // Start from first day and pad the first week if needed
     const firstDay = new Date(data[0]?.date);
@@ -40,7 +51,7 @@ const GitHubHeatmap: React.FC<GitHubHeatmapProps> = ({ activityData, activitySum
     for (let i = 0; i < firstDayOfWeek; i++) {
       currentWeek.push({
         date: '',
-        count: 0,
+        submissionCount: 0,
         level: 0
       });
     }
@@ -61,7 +72,7 @@ const GitHubHeatmap: React.FC<GitHubHeatmapProps> = ({ activityData, activitySum
       while (currentWeek.length < 7) {
         currentWeek.push({
           date: '',
-          count: 0,
+          submissionCount: 0,
           level: 0
         });
       }
@@ -73,7 +84,7 @@ const GitHubHeatmap: React.FC<GitHubHeatmapProps> = ({ activityData, activitySum
 
   const weeks = groupByWeeks(activityData);
   
-  // Create month labels with proper positioning - same logic as LeetCode
+  // Create month labels with proper positioning
   const getMonthLabels = () => {
     const labels: { month: string; position: number }[] = [];
     let currentMonth = -1;
@@ -106,14 +117,14 @@ const GitHubHeatmap: React.FC<GitHubHeatmapProps> = ({ activityData, activitySum
 
   const monthLabels = getMonthLabels();
 
-  // Get color for activity level (exactly matching GitHub's styling)
+  // Get color for activity level (LeetCode orange theme)
   const getActivityColor = (level: number) => {
     switch (level) {
       case 0: return '#161b22'; // Very dark gray for no activity
-      case 1: return '#0e4429'; // Dark green
-      case 2: return '#006d32'; // Medium green  
-      case 3: return '#26a641'; // Bright green
-      case 4: return '#39d353'; // Brightest green
+      case 1: return '#4a2c00'; // Dark orange
+      case 2: return '#8b4513'; // Medium orange  
+      case 3: return '#ff8c00'; // Bright orange
+      case 4: return '#ffa500'; // Brightest orange
       default: return '#161b22';
     }
   };
@@ -134,9 +145,8 @@ const GitHubHeatmap: React.FC<GitHubHeatmapProps> = ({ activityData, activitySum
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-sm font-medium" style={{ color: '#f0f6fc' }}>
-          {activitySummary.totalActivity} contributions
+          {activitySummary.totalSubmissions} submissions in the past year
         </h3>
-        
       </div>
 
       {/* Main heatmap container */}
@@ -170,7 +180,7 @@ const GitHubHeatmap: React.FC<GitHubHeatmapProps> = ({ activityData, activitySum
             <div className="h-3"></div>
           </div>
 
-          {/* Contribution grid */}
+          {/* Submission grid */}
           <div className="flex gap-1">
             {weeks.map((week, weekIndex) => (
               <div key={weekIndex} className="flex flex-col gap-1">
@@ -203,11 +213,16 @@ const GitHubHeatmap: React.FC<GitHubHeatmapProps> = ({ activityData, activitySum
           </div>
         </div>
 
-        {/* Bottom section with legend and learn link */}
+        {/* Bottom section with legend */}
         <div className="flex justify-between items-center mt-4">
-          <button className="text-xs hover:underline" style={{ color: '#7d8590' }}>
-            Learn how we count contributions
-          </button>
+          <div className="flex items-center gap-4">
+            <span className="text-xs" style={{ color: '#7d8590' }}>
+              Current streak: {activitySummary.currentStreak} days
+            </span>
+            <span className="text-xs" style={{ color: '#7d8590' }}>
+              Longest streak: {activitySummary.longestStreak} days
+            </span>
+          </div>
           
           <div className="flex items-center gap-2">
             <span className="text-xs" style={{ color: '#7d8590' }}>Less</span>
@@ -236,7 +251,7 @@ const GitHubHeatmap: React.FC<GitHubHeatmapProps> = ({ activityData, activitySum
           hoveredDay && hoveredDay.date && (
             <div className="text-center">
               <div className="font-medium">
-                {hoveredDay.count} contribution{hoveredDay.count !== 1 ? 's' : ''}
+                {hoveredDay.submissionCount} submission{hoveredDay.submissionCount !== 1 ? 's' : ''}
               </div>
               <div style={{ color: '#7d8590' }}>{formatDate(hoveredDay.date)}</div>
             </div>
@@ -247,4 +262,4 @@ const GitHubHeatmap: React.FC<GitHubHeatmapProps> = ({ activityData, activitySum
   );
 };
 
-export default GitHubHeatmap;
+export default LeetCodeHeatmap;
