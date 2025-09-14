@@ -5,12 +5,14 @@ import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { toast } from "sonner";
-import { useGitHubData } from '../utils/useGitHubData';
-import { useGitHubConnectionStatus, useGitHubActionStatus } from '../utils/useGitHubConnectionStatus'
-import { useLeetCodeData } from '../utils/useLeetCodeData';
+import { useGitHubData } from '../utils/useGitHubData'
+import { useLeetCodeData } from '../utils/useLeetCodeData'
+import { useGFGData } from '../utils/useGFGData'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import GitHubHeatmap from './GitHubHeatmap'
 import { LeetCodeDashboard } from './LeetCodeDashboard'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
+import GFGDashboard from './GFGDashboard'
+import { useGitHubConnectionStatus, useGitHubActionStatus } from '../utils/useGitHubConnectionStatus'
 
 export function DashboardPage() {
   const { user, signOut, signInWithGitHub } = useAuth()
@@ -30,6 +32,7 @@ export function DashboardPage() {
 
   const { data: githubData, loading: githubLoading, backgroundRefreshing, error: githubError, cacheInfo, refetch, fetchInitial } = useGitHubData()
   const { data: leetcodeData, loading: leetcodeLoading, username: leetcodeUsername } = useLeetCodeData()
+  const { data: gfgData, loading: gfgLoading, username: gfgUsername } = useGFGData()
   const connectionStatus = useGitHubConnectionStatus()
   const actionStatus = useGitHubActionStatus(githubError)
 
@@ -117,6 +120,7 @@ export function DashboardPage() {
   // Determine if user has GitHub data to display
   const hasGitHubData = githubData && !githubError;
   const hasLeetCodeData = leetcodeData && leetcodeUsername;
+  const hasGFGData = gfgData && gfgUsername;
 
   const stats = hasGitHubData ? [
     { icon: GitBranch, label: "Repositories", value: githubData.stats.totalRepos.toString(), color: "text-primary" },
@@ -227,7 +231,7 @@ export function DashboardPage() {
 
         {/* Quick Actions */}
         <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-12"
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
@@ -353,6 +357,48 @@ export function DashboardPage() {
             </Button>
           </motion.div>
 
+          {/* Connect GeeksForGeeks */}
+          <motion.div
+            className="glassmorphism p-8 rounded-2xl group hover:scale-105 transition-all duration-300"
+            whileHover={{ y: -10 }}
+          >
+            <Target size={48} className={`mb-6 group-hover:scale-110 transition-transform ${
+              hasGFGData ? 'text-green-400' : 
+              'text-gray-400 group-hover:text-white'
+            }`} />
+            <h3 className="text-xl font-semibold mb-4 text-foreground">
+              {hasGFGData ? 'GeeksForGeeks Connected' : 'Connect GeeksForGeeks'}
+            </h3>
+            <p className="text-muted-foreground mb-6">
+              {hasGFGData 
+                ? 'Connected to GeeksForGeeks. View your problem-solving stats in the GFG tab.'
+                : 'Track your GeeksForGeeks progress and coding practice journey.'
+              }
+            </p>
+            
+            {hasGFGData && gfgData && (
+              <div className="text-xs text-muted-foreground mb-4 p-2 bg-muted/20 rounded">
+                <div className="flex items-center justify-between">
+                  <span>Problems Solved: {gfgData.stats.totalProblemsSolved || 0}</span>
+                  <span>Score: {gfgData.profile.codingScore || 'N/A'}</span>
+                </div>
+              </div>
+            )}
+            
+            <Button 
+              className={`w-full ${
+                hasGFGData ? 'bg-green-600 hover:bg-green-700' :
+                'bg-gray-800 hover:bg-gray-700'
+              } text-white`}
+              onClick={() => {
+                // Navigate to GFG tab
+                handleMainTabChange("gfg")
+              }}
+            >
+              {hasGFGData ? 'View GFG Stats' : 'Connect GeeksForGeeks'}
+            </Button>
+          </motion.div>
+
           {/* Upload Resume */}
           <motion.div
             className="glassmorphism p-8 rounded-2xl group hover:scale-105 transition-all duration-300"
@@ -392,20 +438,35 @@ export function DashboardPage() {
           transition={{ duration: 0.8, delay: 0.6 }}
         >
           <Tabs value={activeTab} onValueChange={handleMainTabChange} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2 glassmorphism">
-              <TabsTrigger value="github" className="flex items-center gap-2">
-                <Github className="h-4 w-4" />
+            <TabsList className="grid w-full grid-cols-5 glassmorphism">
+              <TabsTrigger value="github" className="flex items-center gap-1 text-xs">
+                <Github className="h-3 w-3" />
                 GitHub
                 {hasGitHubData && (
-                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                  <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="leetcode" className="flex items-center gap-2">
-                <Code className="h-4 w-4" />
+              <TabsTrigger value="leetcode" className="flex items-center gap-1 text-xs">
+                <Code className="h-3 w-3" />
                 LeetCode
                 {hasLeetCodeData && (
-                  <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+                  <div className="w-1.5 h-1.5 bg-orange-400 rounded-full"></div>
                 )}
+              </TabsTrigger>
+              <TabsTrigger value="gfg" className="flex items-center gap-1 text-xs">
+                <Target className="h-3 w-3" />
+                GFG
+                {hasGFGData && (
+                  <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></div>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="hackerrank" className="flex items-center gap-1 text-xs">
+                <Trophy className="h-3 w-3" />
+                HackerRank
+              </TabsTrigger>
+              <TabsTrigger value="codeforces" className="flex items-center gap-1 text-xs">
+                <Activity className="h-3 w-3" />
+                Codeforces
               </TabsTrigger>
             </TabsList>
 
@@ -509,6 +570,42 @@ export function DashboardPage() {
 
             <TabsContent value="leetcode">
               <LeetCodeDashboard />
+            </TabsContent>
+
+            <TabsContent value="gfg">
+              <GFGDashboard />
+            </TabsContent>
+
+            <TabsContent value="hackerrank">
+              <div className="glassmorphism p-8 rounded-2xl text-center">
+                <Trophy size={48} className="mx-auto mb-4 text-orange-500" />
+                <h2 className="text-2xl font-semibold mb-4 text-foreground">HackerRank Integration</h2>
+                <p className="text-muted-foreground mb-6">
+                  HackerRank integration is coming soon! Track your coding challenges and competitive programming progress.
+                </p>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>• View your HackerRank profile statistics</p>
+                  <p>• Track solved challenges by category</p>
+                  <p>• Monitor your ranking and badges</p>
+                  <p>• Analyze problem-solving patterns</p>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="codeforces">
+              <div className="glassmorphism p-8 rounded-2xl text-center">
+                <Activity size={48} className="mx-auto mb-4 text-blue-500" />
+                <h2 className="text-2xl font-semibold mb-4 text-foreground">Codeforces Integration</h2>
+                <p className="text-muted-foreground mb-6">
+                  Codeforces integration is coming soon! Monitor your competitive programming journey.
+                </p>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>• View your rating and contest history</p>
+                  <p>• Track solved problems by difficulty</p>
+                  <p>• Monitor ranking progression</p>
+                  <p>• Analyze contest performance</p>
+                </div>
+              </div>
             </TabsContent>
           </Tabs>
         </motion.div>
