@@ -2,9 +2,15 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
+// Import Vite's type definitions for import.meta.env
+/// <reference types="vite/client" />
 
 // LeetCode API Base URL from environment variables
-const LEETCODE_API_BASE = import.meta.env.VITE_LEETCODE_API_BASE_URL || 'https://myleetcodeapi-98392092765.asia-south1.run.app';
+const LEETCODE_API_BASE = import.meta.env.VITE_LEETCODE_API_BASE_URL;
+
+if (!LEETCODE_API_BASE) {
+  throw new Error('VITE_LEETCODE_API_BASE_URL environment variable is required');
+}
 
 // Type definitions based on alfa-leetcode-api responses
 interface LeetCodeProfile {
@@ -124,6 +130,10 @@ export function useLeetCodeData() {
 
   // Simple fetch from your LeetCode API server
   const fetchFromLeetCodeAPI = async (endpoint: string): Promise<any> => {
+    if (!LEETCODE_API_BASE) {
+      throw new Error('LeetCode API server URL is not configured. Please set VITE_LEETCODE_API_BASE_URL in your environment variables.');
+    }
+
     const response = await fetch(`${LEETCODE_API_BASE}${endpoint}`, {
       headers: {
         'Accept': 'application/json',
