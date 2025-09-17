@@ -24,6 +24,25 @@ from pydantic import BaseModel, HttpUrl
 import google.generativeai as genai
 from supabase import create_client, Client
 
+# Environment variables with production defaults (MUST BE BEFORE APP INITIALIZATION)
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+PORT = int(os.getenv("PORT", 8000))
+
+# CORS configuration from environment
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173").split(",")
+
+# Production environment checks
+if ENVIRONMENT == "production":
+    if not GEMINI_API_KEY:
+        raise ValueError("GEMINI_API_KEY is required in production")
+    if not SUPABASE_URL:
+        raise ValueError("SUPABASE_URL is required in production")
+    if not SUPABASE_SERVICE_KEY:
+        raise ValueError("SUPABASE_SERVICE_KEY is required in production")
+
 # Initialize FastAPI app with production configuration
 app = FastAPI(
     title="AlgoMate Resume Analysis API",
@@ -62,25 +81,6 @@ async def add_security_headers(request, call_next):
     if ENVIRONMENT == "production":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
-
-# Environment variables with production defaults
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-PORT = int(os.getenv("PORT", 8000))
-
-# CORS configuration from environment
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173").split(",")
-
-# Production environment checks
-if ENVIRONMENT == "production":
-    if not GEMINI_API_KEY:
-        raise ValueError("GEMINI_API_KEY is required in production")
-    if not SUPABASE_URL:
-        raise ValueError("SUPABASE_URL is required in production")
-    if not SUPABASE_SERVICE_KEY:
-        raise ValueError("SUPABASE_SERVICE_KEY is required in production")
 
 # Initialize Gemini AI with timeout configuration
 if GEMINI_API_KEY:
