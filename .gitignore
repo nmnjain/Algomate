@@ -1,35 +1,67 @@
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
+# Frontend dependencies (in frontend folder)
+frontend/node_modules/
+frontend/.pnp
+frontend/.pnp.js
 
-# testing
-/coverage
+# Frontend testing
+frontend/coverage/
 
-# production
-/build
-/dist
+# Frontend production builds
+frontend/build/
+frontend/dist/
 
-# misc
+# Frontend misc
 .DS_Store
 *.pem
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# Frontend debug logs
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# Root level environment files (global project settings)
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
 # IDE
 .vscode/*
 !.vscode/extensions.json
 .idea
 
-# Temporary project files (remove these lines after development)
+# Python backend
+backend/__pycache__/
+backend/*.pyc
+backend/*.pyo
+backend/*.pyd
+backend/.Python
+backend/env/
+backend/venv/
+backend/ENV/
+backend/env.bak/
+backend/venv.bak/
+backend/.env
+backend/.venv
+backend/pip-log.txt
+backend/pip-delete-this-directory.txt
+backend/.coverage
+backend/.pytest_cache/
+backend/htmlcov/
+backend/instance/
+backend/.webassets-cache
+backend/dist/
+backend/build/
+backend/*.egg-info/
+backend/.mypy_cache/
+backend/.dmypy.json
+backend/dmypy.json
 project.txt
 Project_Report_and_Checklist.txt
 GITHUB_CONNECTION_STRATEGY.md
@@ -41,4 +73,8 @@ supabase/config.toml
 supabase/.branches/
 supabase/.temp/
 .supabase/
-src/lib/supabase/README.md
+frontend/src/lib/supabase/README.md
+
+MANUAL_DEPLOY.md
+
+.github/

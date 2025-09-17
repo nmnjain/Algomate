@@ -1,6 +1,6 @@
 import { motion } from "motion/react"
 import { Button } from "./ui/button"
-import { Code2, LogOut, Github, Mail, FileText, Trophy, Activity, Star, GitBranch, Users, Code, Target } from "lucide-react"
+import { Code2, LogOut, Github, Mail, FileText, Trophy, Activity, Star, GitBranch, Users, Code, Target, Upload } from "lucide-react"
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
@@ -8,11 +8,15 @@ import { toast } from "sonner";
 import { useGitHubData } from '../utils/useGitHubData'
 import { useLeetCodeData } from '../utils/useLeetCodeData'
 import { useGFGData } from '../utils/useGFGData'
+import { useResumeData } from '../utils/useResumeData'
+import { useResumeUpload } from '../utils/useResumeUpload'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import GitHubHeatmap from './GitHubHeatmap'
 import { LeetCodeDashboard } from './LeetCodeDashboard'
 import GFGDashboard from './GFGDashboard'
+import ResumeDashboard from './ResumeDashboard'
 import { useGitHubConnectionStatus, useGitHubActionStatus } from '../utils/useGitHubConnectionStatus'
+import { supabase } from '../lib/supabase'
 
 export function DashboardPage() {
   const { user, signOut, signInWithGitHub } = useAuth()
@@ -30,9 +34,31 @@ export function DashboardPage() {
     localStorage.setItem('dashboard-main-tab', newTab);
   };
 
+  // Handle resume update - removes old resume and opens file picker
+  const handleUpdateResume = async () => {
+    try {
+      toast.info('Removing existing resume...');
+      await removeResume();
+      resetState();
+      
+      // Refresh the resume data to update UI state
+      await refetchResumeData();
+      
+      toast.success('Resume removed. You can now upload a new resume.');
+      
+      // Navigate to resume tab
+      handleMainTabChange("resume");
+    } catch (error) {
+      console.error('Error updating resume:', error);
+      toast.error('Failed to remove existing resume');
+    }
+  };
+
   const { data: githubData, loading: githubLoading, backgroundRefreshing, error: githubError, cacheInfo, refetch, fetchInitial } = useGitHubData()
   const { data: leetcodeData, loading: leetcodeLoading, username: leetcodeUsername } = useLeetCodeData()
   const { data: gfgData, loading: gfgLoading, username: gfgUsername } = useGFGData()
+  const { data: resumeData, loading: resumeLoading, hasResume, refetch: refetchResumeData } = useResumeData()
+  const { removeResume, resetState } = useResumeUpload()
   const connectionStatus = useGitHubConnectionStatus()
   const actionStatus = useGitHubActionStatus(githubError)
 
@@ -121,6 +147,7 @@ export function DashboardPage() {
   const hasGitHubData = githubData && !githubError;
   const hasLeetCodeData = leetcodeData && leetcodeUsername;
   const hasGFGData = gfgData && gfgUsername;
+  const hasResumeData = resumeData && hasResume;
 
   const stats = hasGitHubData ? [
     { icon: GitBranch, label: "Repositories", value: githubData.stats.totalRepos.toString(), color: "text-primary" },
@@ -399,19 +426,90 @@ export function DashboardPage() {
             </Button>
           </motion.div>
 
-          {/* Upload Resume */}
+          {/* Upload/Update Resume */}
           <motion.div
             className="glassmorphism p-8 rounded-2xl group hover:scale-105 transition-all duration-300"
             whileHover={{ y: -10 }}
           >
-            <FileText size={48} className="text-primary mb-6 group-hover:scale-110 transition-transform" />
-            <h3 className="text-xl font-semibold mb-4 text-foreground">Update Resume</h3>
+            <FileText size={48} className={`mb-6 group-hover:scale-110 transition-transform ${
+              hasResumeData ? 'text-green-400' : 'text-gray-400 group-hover:text-white'
+            }`} />
+            <h3 className="text-xl font-semibold mb-4 text-foreground">
+              {resumeLoading ? 'Loading Resume' : 
+               hasResumeData ? 'Resume Uploaded' : 'Upload Resume'}
+            </h3>
             <p className="text-muted-foreground mb-6">
-              Upload or update your resume to enhance your developer profile.
+              {hasResumeData 
+                ? 'Upload or update your resume to enhance your developer profile.'
+                : 'Upload or update your resume to enhance your developer profile.'
+              }
             </p>
-            <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-              Upload Resume
-            </Button>
+            
+            {/* Resume Status Info */}
+            {hasResumeData && resumeData && (
+              <div className="text-xs text-muted-foreground mb-4 p-2 bg-muted/20 rounded">
+                <div className="flex items-center justify-between mb-1">
+                  <span>File: {resumeData.fileName}</span>
+                  <span className="text-green-400">✓ Analyzed</span>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Uploaded: {new Date(resumeData.uploadedAt).toLocaleDateString()}
+                </div>
+              </div>
+            )}
+            
+            <div className="space-y-3">
+              {hasResumeData ? (
+                // Show View and Update buttons when resume exists
+                <>
+                  <Button 
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={async () => {
+                      if (resumeData?.filePath) {
+                        try {
+                          // Create signed URL to view resume
+                          const { data } = await supabase.storage
+                            .from('resumes')
+                            .createSignedUrl(resumeData.filePath, 3600); // 1 hour expiry
+                          
+                          if (data?.signedUrl) {
+                            window.open(data.signedUrl, '_blank');
+                          } else {
+                            toast.error('Failed to generate resume view link');
+                          }
+                        } catch (error) {
+                          console.error('Error viewing resume:', error);
+                          toast.error('Failed to view resume');
+                        }
+                      }
+                    }}
+                  >
+                    <FileText size={16} className="mr-2" />
+                    View Resume
+                  </Button>
+                  <Button 
+                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                    onClick={handleUpdateResume}
+                  >
+                    <Upload size={16} className="mr-2" />
+                    Update Resume
+                  </Button>
+                </>
+              ) : (
+                // Show Upload button when no resume exists
+                <Button 
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                  onClick={() => {
+                    // Navigate to resume tab for uploading
+                    handleMainTabChange("resume")
+                  }}
+                  disabled={resumeLoading}
+                >
+                  <Upload size={16} className="mr-2" />
+                  {resumeLoading ? 'Loading...' : 'Upload Resume'}
+                </Button>
+              )}
+            </div>
           </motion.div>
 
           {/* Find Hackathons */}
@@ -460,9 +558,12 @@ export function DashboardPage() {
                   <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></div>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="hackerrank" className="flex items-center gap-1 text-xs">
-                <Trophy className="h-3 w-3" />
-                HackerRank
+              <TabsTrigger value="resume" className="flex items-center gap-1 text-xs">
+                <Upload className="h-3 w-3" />
+                Resume
+                {hasResumeData && (
+                  <div className="w-1.5 h-1.5 bg-purple-400 rounded-full"></div>
+                )}
               </TabsTrigger>
               <TabsTrigger value="codeforces" className="flex items-center gap-1 text-xs">
                 <Activity className="h-3 w-3" />
@@ -576,20 +677,8 @@ export function DashboardPage() {
               <GFGDashboard />
             </TabsContent>
 
-            <TabsContent value="hackerrank">
-              <div className="glassmorphism p-8 rounded-2xl text-center">
-                <Trophy size={48} className="mx-auto mb-4 text-orange-500" />
-                <h2 className="text-2xl font-semibold mb-4 text-foreground">HackerRank Integration</h2>
-                <p className="text-muted-foreground mb-6">
-                  HackerRank integration is coming soon! Track your coding challenges and competitive programming progress.
-                </p>
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <p>• View your HackerRank profile statistics</p>
-                  <p>• Track solved challenges by category</p>
-                  <p>• Monitor your ranking and badges</p>
-                  <p>• Analyze problem-solving patterns</p>
-                </div>
-              </div>
+            <TabsContent value="resume">
+              <ResumeDashboard />
             </TabsContent>
 
             <TabsContent value="codeforces">
