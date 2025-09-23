@@ -54,7 +54,7 @@ export function DashboardPage() {
   const { data: leetcodeData, loading: leetcodeLoading, username: leetcodeUsername } = useLeetCodeData()
   const { data: gfgData, loading: gfgLoading, username: gfgUsername } = useGFGData()
   const { data: resumeData, loading: resumeLoading, hasResume, refetch: refetchResumeData } = useResumeData()
-  const { hasRecommendations } = useHackathonData();
+  // const { hasRecommendations } = useHackathonData();
   const { removeResume, resetState } = useResumeUpload()
   const connectionStatus = useGitHubConnectionStatus()
   const actionStatus = useGitHubActionStatus(githubError)
@@ -73,44 +73,62 @@ export function DashboardPage() {
   }
 
   const handleGitHubAction = async () => {
-    // ... (This function is correct, no changes needed here)
+
     try {
       switch (actionStatus.action) {
         case 'connect':
+          // Clear any error state when reconnecting
           if (githubError === 'github_token_expired') {
             toast.info('Reconnecting GitHub account...');
           }
+
           const { error } = await signInWithGitHub();
           if (error) {
             toast.error(`GitHub connection failed: ${error.message}`);
           } else {
-            toast.success('GitHub account connected successfully!');
-            setTimeout(() => { fetchInitial(); }, 2000);
+            if (githubError === 'github_token_expired') {
+              toast.success('GitHub account reconnected successfully!');
+            } else {
+              toast.success('GitHub account connected successfully!');
+            }
+            // Fetch fresh data after successful connection
+            setTimeout(() => {
+              fetchInitial();
+            }, 2000);
           }
           break;
+
         case 'sync':
           toast.info('Loading GitHub data...');
           await fetchInitial();
           toast.success('GitHub data loaded successfully!');
           break;
+
         case 'refresh':
           toast.info('Refreshing GitHub data...');
           try {
             await refetch();
             toast.success('GitHub data refreshed successfully!');
           } catch (error: any) {
-            if (error?.message?.includes('token expired')) {
+            // If token expired during refresh, automatically redirect to OAuth
+            if (error?.message === 'GITHUB_TOKEN_EXPIRED' ||
+              error?.message?.includes('token expired') ||
+              error?.message?.includes('token not found')) {
               toast.info('GitHub token expired. Reconnecting...');
+
               const { error: oauthError } = await signInWithGitHub();
               if (oauthError) {
                 toast.error(`GitHub reconnection failed: ${oauthError.message}`);
               } else {
                 toast.success('GitHub reconnected! Fetching fresh data...');
-                setTimeout(() => { fetchInitial(); }, 2000);
+                // Fetch fresh data after successful reconnection
+                setTimeout(() => {
+                  fetchInitial();
+                }, 2000);
               }
             } else {
               toast.error('Failed to refresh GitHub data');
-              throw error;
+              throw error; // Re-throw if it's not a token error
             }
           }
           break;
@@ -172,7 +190,12 @@ export function DashboardPage() {
           {/* Resume Card */}
           <motion.div className="glassmorphism p-8 rounded-2xl group hover:scale-105 transition-all duration-300" whileHover={{ y: -10 }}><FileText size={48} className={`mb-6 group-hover:scale-110 transition-transform ${hasResumeData ? 'text-green-400' : 'text-gray-400 group-hover:text-white'}`} /><h3 className="text-xl font-semibold mb-4 text-foreground">{resumeLoading ? 'Loading Resume' : hasResumeData ? 'Resume Uploaded' : 'Upload Resume'}</h3><p className="text-muted-foreground mb-6">{'Upload or update your resume to enhance your developer profile.'}</p>{hasResumeData && resumeData && (<div className="text-xs text-muted-foreground mb-4 p-2 bg-muted/20 rounded"><div className="flex items-center justify-between mb-1"><span>File: {resumeData.fileName}</span><span className="text-green-400">✓ Analyzed</span></div><div className="text-xs text-muted-foreground">Uploaded: {new Date(resumeData.uploadedAt).toLocaleDateString()}</div></div>)}<div className="space-y-3">{hasResumeData ? (<><Button className="w-full bg-blue-600 hover:bg-blue-700 text-white" onClick={async () => { if (resumeData?.filePath) { try { const { data } = await supabase.storage.from('resumes').createSignedUrl(resumeData.filePath, 3600); if (data?.signedUrl) { window.open(data.signedUrl, '_blank'); } else { toast.error('Failed to generate resume view link'); } } catch (error) { console.error('Error viewing resume:', error); toast.error('Failed to view resume'); } } }}><FileText size={16} className="mr-2" />View Resume</Button><Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleUpdateResume}><Upload size={16} className="mr-2" />Update Resume</Button></>) : (<Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => { handleMainTabChange("resume") }} disabled={resumeLoading}><Upload size={16} className="mr-2" />{resumeLoading ? 'Loading...' : 'Upload Resume'}</Button>)}</div></motion.div>
           {/* Hackathons Card */}
-          <motion.div className="glassmorphism p-8 rounded-2xl group hover:scale-105 transition-all duration-300" whileHover={{ y: -10 }}><Trophy size={48} className="text-accent mb-6 group-hover:scale-110 transition-transform" /><h3 className="text-xl font-semibold mb-4 text-foreground">Find Hackathons</h3><p className="text-muted-foreground mb-6">Discover hackathons that match your skills and interests.</p><Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90" onClick={() => handleMainTabChange("hackathons")}>Browse Hackathons</Button></motion.div>
+          <motion.div className="glassmorphism p-8 rounded-2xl group hover:scale-105 transition-all duration-300" whileHover={{ y: -10 }}><Trophy size={48} className="text-accent mb-6 group-hover:scale-110 transition-transform" /><h3 className="text-xl font-semibold mb-4 text-foreground">Find Hackathons</h3><p className="text-muted-foreground mb-6">Discover hackathons that match your skills and interests.</p><Button 
+              className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
+              onClick={() => navigate("/hackathons")} 
+            >
+              Browse Hackathons
+            </Button></motion.div>
         </motion.div>
 
         {/* Platform Tabs */}
@@ -207,12 +230,7 @@ export function DashboardPage() {
                 {hasResumeData && (<div className="w-1.5 h-1.5 bg-purple-400 rounded-full"></div>)}
               </TabsTrigger>
 
-              {/* --- FIX #2: ADD THE HACKATHONS TAB TRIGGER --- */}
-              <TabsTrigger value="hackathons" className="flex items-center gap-1 text-xs">
-                <Trophy className="h-3 w-3" />
-                Hackathons
-                {hasRecommendations && (<div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>)}
-              </TabsTrigger>
+          
 
               <TabsTrigger value="codeforces" className="flex items-center gap-1 text-xs">
                 <Activity className="h-3 w-3" />
@@ -238,9 +256,9 @@ export function DashboardPage() {
               <ResumeDashboard />
             </TabsContent>
 
-            <TabsContent value="hackathons">
+            {/* <TabsContent value="hackathons">
               <HackathonsPage />
-            </TabsContent>
+            </TabsContent> */}
 
             <TabsContent value="codeforces">
               <div className="glassmorphism p-8 rounded-2xl text-center">

@@ -12,6 +12,7 @@ import { AIRecommendations } from './AIRecommendations';
 // import { HackathonDiscovery } from './HackathonDiscovery';
 import { TestimonialsSection } from './TestimonialsSection';
 import { CTASection } from './CTASection';
+import { HackathonsRoutePage } from './HackathonsRoutePage';
 
 export function AppRouter() {
   const { user, loading } = useAuth();
@@ -45,6 +46,10 @@ export function AppRouter() {
           <Route path="login" element={!user ? <LoginPage /> : <Navigate to="/dashboard" />} />
           <Route path="signup" element={!user ? <SignupPage /> : <Navigate to="/dashboard" />} />
           <Route path="dashboard" element={user ? <DashboardPage /> : <Navigate to="/login" />} />
+          <Route 
+            path="hackathons" 
+            element={user ? <HackathonsRoutePage /> : <Navigate to="/login" />} 
+          />
           <Route path="auth/callback" element={<AuthCallback />} />
         </Route>
       </Routes>

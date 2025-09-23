@@ -175,3 +175,84 @@ async def generate_and_store_recommendations(user_id: str, supabase: Client):
         logger.error(f"❌ [Recommender] Failed to generate recommendations for {user_id}: {str(e)}", exc_info=True)
 
 
+async def find_matching_teammates(hackathon_id: str, current_user_id: str, supabase: Client) -> list:
+    """
+    Finds other users who have this hackathon in their recommendations.
+    """
+    try:
+        logger.info(f"🚀 [Team Finder] Searching for teammates for hackathon: {hackathon_id}")
+        
+        # 1. Find all users who have this hackathon_id in their recommended_ids
+        response = await asyncio.to_thread(
+            supabase.table("user_platform_data")
+            .select("user_id")
+            .eq("platform", "hackathon_recommendations")
+            
+            .contains("data->recommended_ids", f'["{hackathon_id}"]') 
+            .execute
+        )
+
+        if not response.data:
+            logger.warning(f"[Team Finder] No other users found with this hackathon recommended.")
+            return []
+
+        # Filter out the current user and get a list of potential teammate IDs
+        teammate_ids = [
+            row['user_id'] for row in response.data if row['user_id'] != current_user_id
+        ]
+        
+        if not teammate_ids:
+            logger.info(f"[Team Finder] Only the current user has this recommendation. No teammates to show.")
+            return []
+            
+        logger.info(f"✅ [Team Finder] Found {len(teammate_ids)} potential teammates. Fetching profiles...")
+
+        # 2. Fetch the public profile and skills for these teammates
+        teammates_res = await asyncio.to_thread(
+            supabase.table("users")
+            .select("id, full_name, avatar_url, linkedin_url")
+            .in_("id", teammate_ids)
+            .execute
+        )
+
+        # 3. Fetch their skills from the cache for a richer profile
+        skills_res = await asyncio.to_thread(
+            supabase.table("user_platform_data")
+            .select("user_id, data")
+            .in_("user_id", teammate_ids)
+            .eq("platform", "resume")
+            .execute
+        )
+        
+        # Create a quick lookup map for skills
+        skills_map = {
+            row['user_id']: row['data'].get('skills', {}).get('technical', {}) 
+            for row in skills_res.data
+        }
+
+        # 4. Combine the data into a final list of profiles
+        teammate_profiles = []
+        for profile in teammates_res.data:
+            user_id = profile['id']
+            tech_skills = skills_map.get(user_id, {})
+            
+            # Consolidate top skills for the summary card
+            top_skills = (
+                tech_skills.get('programming_languages', [])[:2] +
+                tech_skills.get('frameworks_libraries', [])[:2]
+            )
+            
+            teammate_profiles.append({
+                "id": user_id,
+                "name": profile.get('full_name', 'Anonymous User'),
+                "avatar_url": profile.get('avatar_url'),
+                "linkedin_url": profile.get('linkedin_url'),
+                "top_skills": top_skills[:4] # Show a max of 4 top skills
+            })
+        
+        logger.info(f"✅ [Team Finder] Successfully prepared {len(teammate_profiles)} teammate profiles.")
+        return teammate_profiles
+
+    except Exception as e:
+        logger.error(f"❌ [Team Finder] Error finding teammates: {str(e)}", exc_info=True)
+        return []

@@ -8,9 +8,10 @@ import aiohttp
 import PyPDF2
 import pytesseract
 from PIL import Image
+from pydantic import BaseModel
 import io
 import json
-from hackathon_recommender import generate_and_store_recommendations 
+from hackathon_recommender import find_matching_teammates, generate_and_store_recommendations 
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -94,7 +95,7 @@ if GEMINI_API_KEY:
     }
     
     model = genai.GenerativeModel(
-        'gemini-1.5-flash',  # Changed from 'gemini-2.5-flash'
+        'gemini-2.5-flash',  # Changed from 'gemini-2.5-flash'
         generation_config=generation_config
     )
 else:
@@ -113,6 +114,10 @@ class ResumeAnalysisRequest(BaseModel):
     user_id: str
     supabase_url: Optional[str] = None
     supabase_service_key: Optional[str] = None
+
+class TeammateRequest(BaseModel):
+    hackathon_id: str
+    user_id: str
 
 class OCRResult(BaseModel):
     extracted_text: str
@@ -771,6 +776,21 @@ async def get_analysis_status(analysis_id: str):
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Status check failed: {str(e)}")
+    
+@app.post("/find-teammates")
+async def get_teammates_for_hackathon(request: TeammateRequest):
+    """
+    Finds and returns a list of suitable teammates for a given hackathon.
+    """
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database service not available")
+    
+    teammates = await find_matching_teammates(request.hackathon_id, request.user_id, supabase)
+    
+    if teammates is None:
+        raise HTTPException(status_code=500, detail="An error occurred while searching for teammates.")
+        
+    return {"teammates": teammates}
 
 # Vercel serverless handler
 app_handler = app
