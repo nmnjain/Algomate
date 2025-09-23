@@ -10,6 +10,7 @@ import pytesseract
 from PIL import Image
 import io
 import json
+from hackathon_recommender import generate_and_store_recommendations 
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -533,6 +534,7 @@ async def process_resume_background(
         await update_analysis_status(analysis_id, "processing")
         
         # OCR Processing
+
         start_time = datetime.now()
         extracted_text, confidence = await OCRService.process_file(file_url, mime_type)
         processing_time = (datetime.now() - start_time).total_seconds()
@@ -551,6 +553,7 @@ async def process_resume_background(
         
         # Update status to completed
         await update_analysis_status(analysis_id, "completed")
+        await generate_and_store_recommendations(user_id, supabase)
         
     except Exception as e:
         # Update status to failed
@@ -732,6 +735,21 @@ async def analyze_resume(request: ResumeAnalysisRequest, background_tasks: Backg
         raise he
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to start resume analysis: {str(e)}")
+
+@app.post("/recommend-hackathons/{user_id}", status_code=202)
+async def trigger_hackathon_recommendations(user_id: str, background_tasks: BackgroundTasks):
+    """
+    Triggers a background task to generate hackathon recommendations for a user.
+    """
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database service not available")
+
+    background_tasks.add_task(generate_and_store_recommendations, user_id, supabase)
+    
+    return {
+        "message": "Hackathon recommendation generation has been started in the background.",
+        "user_id": user_id
+    }
 
 @app.get("/analysis-status/{analysis_id}")
 async def get_analysis_status(analysis_id: str):

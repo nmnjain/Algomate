@@ -9,7 +9,7 @@ import { HeroSection } from './HeroSection';
 import { FeaturesSection } from './FeaturesSection';
 import { DashboardPreview } from './DashboardPreview';
 import { AIRecommendations } from './AIRecommendations';
-import { HackathonDiscovery } from './HackathonDiscovery';
+// import { HackathonDiscovery } from './HackathonDiscovery';
 import { TestimonialsSection } from './TestimonialsSection';
 import { CTASection } from './CTASection';
 
@@ -37,7 +37,7 @@ export function AppRouter() {
               <FeaturesSection />
               <DashboardPreview />
               <AIRecommendations />
-              <HackathonDiscovery />
+              
               <TestimonialsSection />
               <CTASection />
             </>
