@@ -8,15 +8,27 @@ import {
   Loader2, RefreshCw, FileText, Brain, TrendingUp, Target, Upload, CheckCircle, 
   AlertTriangle, Star, Award, Building, GraduationCap, Briefcase, Code, 
   Users, Zap, BookOpen, ChevronRight, Trophy, Lightbulb, Rocket, BarChart3, 
-  Eye, MessageSquare, Search, Network, GitBranch, Database, Cpu, Clock, ExternalLink, FolderOpen
+  Eye, MessageSquare, Search, Network, GitBranch, Database, Cpu, Clock, ExternalLink, FolderOpen,
+  Trash2, Edit3, X
 } from 'lucide-react';
 import { useResumeUpload } from '../utils/useResumeUpload';
 import { useResumeData } from '../utils/useResumeData';
 import { ResumeUpload } from './ResumeUpload';
+import { useAuth } from '../contexts/AuthContext';
+import { toast } from 'sonner';
+import { supabase } from '../lib/supabase';
 
 // --- HELPER COMPONENTS for a clean and consistent UI ---
 
-const AnalysisCard = ({ title, icon: Icon, colorClass = 'text-cyan-400', children, className = '' }) => (
+interface AnalysisCardProps {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  colorClass?: string;
+  children: React.ReactNode;
+  className?: string;
+}
+
+const AnalysisCard: React.FC<AnalysisCardProps> = ({ title, icon: Icon, colorClass = 'text-cyan-400', children, className = '' }) => (
     <Card className={`bg-gray-800/50 border border-gray-700 shadow-lg backdrop-blur-sm h-full ${className}`}>
         <CardHeader>
             <CardTitle className="flex items-center gap-3 text-lg text-white">
@@ -28,7 +40,13 @@ const AnalysisCard = ({ title, icon: Icon, colorClass = 'text-cyan-400', childre
     </Card>
 );
 
-const QuickStatCard = ({ label, value, icon: Icon }) => (
+interface QuickStatCardProps {
+  label: string;
+  value: string | number;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const QuickStatCard: React.FC<QuickStatCardProps> = ({ label, value, icon: Icon }) => (
     <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 flex items-center gap-4 transition-all hover:border-gray-600 hover:bg-gray-800">
         <Icon className="w-8 h-8 text-gray-400 flex-shrink-0" />
         <div>
@@ -38,14 +56,25 @@ const QuickStatCard = ({ label, value, icon: Icon }) => (
     </div>
 );
 
-const MetricBox = ({ label, value }) => (
+interface MetricBoxProps {
+  label: string;
+  value: string | number | undefined;
+}
+
+const MetricBox: React.FC<MetricBoxProps> = ({ label, value }) => (
   <div className="p-4 bg-gray-900/50 rounded-lg text-center border border-gray-700 h-full flex flex-col justify-center">
     <p className="text-xl md:text-2xl font-bold text-white">{value || 'N/A'}</p>
     <p className="text-xs text-gray-400 mt-1">{label}</p>
   </div>
 );
 
-const InfoList = ({ items, icon: Icon, colorClass = 'text-cyan-400' }) => {
+interface InfoListProps {
+  items: string[] | undefined;
+  icon: React.ComponentType<{ className?: string }>;
+  colorClass?: string;
+}
+
+const InfoList: React.FC<InfoListProps> = ({ items, icon: Icon, colorClass = 'text-cyan-400' }) => {
   if (!items || !Array.isArray(items) || items.length === 0) {
     return <p className="text-sm text-gray-500">No data available.</p>;
   }
@@ -62,8 +91,85 @@ const InfoList = ({ items, icon: Icon, colorClass = 'text-cyan-400' }) => {
 };
 
 export const ResumePage: React.FC = () => {
+  const { user } = useAuth();
   const { data, loading, error, refetch, hasResume } = useResumeData();
-  const { uploadResume, getAnalysisResult } = useResumeUpload();
+  const { uploadResume, removeResume, getAnalysisResult, state } = useResumeUpload();
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // Get file URL for viewing resume
+  const getResumeUrl = async () => {
+    if (!data?.filePath) return null;
+    try {
+      const { data: urlData, error } = await supabase.storage
+        .from('resumes')
+        .createSignedUrl(data.filePath, 3600); // 1 hour expiry
+      
+      if (error) {
+        console.error('Error getting signed URL:', error);
+        toast.error('Failed to generate resume URL');
+        return null;
+      }
+      
+      return urlData?.signedUrl;
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to get resume URL');
+      return null;
+    }
+  };
+
+  // Handle viewing resume
+  const handleViewResume = async () => {
+    const url = await getResumeUrl();
+    if (url) {
+      window.open(url, '_blank');
+    }
+  };
+
+  // Handle resume upload (for both new and update)
+  const handleResumeUpload = async (file: File) => {
+    try {
+      setIsUpdating(true);
+      
+      // Show different messages based on whether this is an update or new upload
+      const isUpdate = hasResume;
+      
+      // Upload the resume (this automatically handles deletion of old resume)
+      await uploadResume(file);
+      
+      setShowUploadModal(false);
+      toast.success(isUpdate ? 'Resume updated successfully!' : 'Resume uploaded successfully!');
+      
+      // Refresh the data to show the new analysis
+      await refetch();
+      
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error(hasResume ? 'Failed to update resume' : 'Failed to upload resume');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Handle resume update (remove and upload new)
+  const handleUpdateResume = () => {
+    setShowUploadModal(true);
+  };
+
+  // Handle resume deletion
+  const handleDeleteResume = async () => {
+    if (window.confirm('Are you sure you want to delete your resume? This action cannot be undone.')) {
+      try {
+        await removeResume();
+        toast.success('Resume deleted successfully');
+        refetch();
+      } catch (error) {
+        console.error('Delete error:', error);
+        toast.error('Failed to delete resume');
+      }
+    }
+  };
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -82,7 +188,26 @@ export const ResumePage: React.FC = () => {
   // States: Loading, Error, No Resume
   if (loading) return <div className="flex justify-center items-center h-64"><Loader2 className="w-8 h-8 animate-spin text-cyan-400" /></div>;
   if (error) return <div className="text-center p-8 text-red-400">Error: {error} <Button onClick={() => refetch()} className="ml-4">Retry</Button></div>;
-  if (!hasResume) return <div className="text-center p-8"><ResumeUpload onFileUpload={uploadResume} /></div>;
+  
+  // Show upload section if no resume
+  if (!hasResume) {
+    return (
+      <div className="max-w-4xl mx-auto p-8 space-y-6">
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-white mb-2">Resume Analysis</h1>
+            <p className="text-gray-400">Upload your resume to get AI-powered insights and optimize your career potential</p>
+          </div>
+          <ResumeUpload 
+            onFileUpload={handleResumeUpload}
+            isUploading={state.isUploading}
+            uploadProgress={state.uploadProgress}
+            error={state.error || undefined}
+          />
+        </motion.div>
+      </div>
+    );
+  }
   if (data?.processing_status === 'processing') {
     return (
       <div className="max-w-4xl mx-auto p-8 text-center">
@@ -95,7 +220,7 @@ export const ResumePage: React.FC = () => {
   if (!data) return <div className="text-center p-8">No analysis data found. Please try again.</div>;
 
   const totalSkills = (data.skills?.technical ? Object.values(data.skills.technical).flat().length : 0) + (data.skills?.soft_skills?.length || 0);
-  const formattedDate = data.created_at ? new Date(data.created_at).toLocaleDateString() : 'Invalid Date';
+  const formattedDate = data.uploadedAt ? new Date(data.uploadedAt).toLocaleDateString() : 'Invalid Date';
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 p-4">
@@ -105,8 +230,19 @@ export const ResumePage: React.FC = () => {
           <h1 className="text-3xl font-bold text-white">Resume Analysis</h1>
           <p className="text-gray-400">AI-powered insights to optimize your career potential</p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => refetch()} variant="outline"><RefreshCw className="w-4 h-4 mr-2" />Refresh</Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button onClick={handleViewResume} variant="outline">
+            <Eye className="w-4 h-4 mr-2" />View Resume
+          </Button>
+          <Button onClick={handleUpdateResume} variant="outline">
+            <Edit3 className="w-4 h-4 mr-2" />Update Resume
+          </Button>
+          <Button onClick={() => refetch()} variant="outline">
+            <RefreshCw className="w-4 h-4 mr-2" />Refresh
+          </Button>
+          <Button onClick={handleDeleteResume} variant="outline" className="text-red-400 border-red-400 hover:bg-red-400 hover:text-white">
+            <Trash2 className="w-4 h-4 mr-2" />Delete
+          </Button>
         </div>
       </motion.div>
       
@@ -123,13 +259,12 @@ export const ResumePage: React.FC = () => {
                         </div>
                     </div>
                 </div>
-                {data.file_url && (
-                    <div className="flex justify-center">
-                        <Button variant="outline" onClick={() => window.open(data.file_url, '_blank')}>
-                            <ExternalLink className="w-4 h-4 mr-2" /> View Resume
-                        </Button>
+                <div className="flex justify-center">
+                    <div className="text-center">
+                        <p className="text-sm text-gray-400">File: {data.fileName}</p>
+                        <p className="text-xs text-gray-500 mt-1">{data.processing_status === 'completed' ? 'Ready for insights' : 'Processing...'}</p>
                     </div>
-                )}
+                </div>
                 <div className="text-center md:text-right">
                     <p className="text-3xl font-bold text-white">{data.overall_score}</p>
                     <p className="text-sm text-gray-400">Overall Score</p>
@@ -166,7 +301,7 @@ export const ResumePage: React.FC = () => {
               <InfoList items={data.standout_qualities} icon={CheckCircle} colorClass="text-green-400" />
             </AnalysisCard>
             <AnalysisCard title="Red Flags & Concerns" icon={AlertTriangle} colorClass="text-red-400">
-              {data.red_flags?.length > 0 ? (
+              {data.red_flags && data.red_flags.length > 0 ? (
                 <InfoList items={data.red_flags} icon={AlertTriangle} colorClass="text-red-400" />
               ) : <p className="text-gray-400">No significant red flags detected. Great work!</p>}
             </AnalysisCard>
@@ -233,7 +368,7 @@ export const ResumePage: React.FC = () => {
                {data.recommendations?.map((rec, index) => (
                  <div key={index} className="p-4 bg-gray-900/50 rounded-lg border border-gray-700">
                    <h4 className="font-semibold text-white">{rec.category} <Badge variant="outline" className="ml-2 border-yellow-400 text-yellow-400">{rec.priority}</Badge></h4>
-                   <p className="text-sm text-gray-300 mt-1">{rec.recommendation}</p>
+                   <p className="text-sm text-gray-300 mt-1">{rec.suggestion}</p>
                  </div>
                ))}
              </div>
@@ -254,6 +389,63 @@ export const ResumePage: React.FC = () => {
             </div>
         </TabsContent>
       </Tabs>
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => !isUpdating && setShowUploadModal(false)}
+          />
+          
+          {/* Modal Content */}
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="relative bg-gray-900 border border-gray-700 rounded-xl shadow-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto z-10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-white">
+                {hasResume ? 'Update Resume' : 'Upload Resume'}
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => !isUpdating && setShowUploadModal(false)}
+                disabled={isUpdating}
+                className="text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            
+            {hasResume && (
+              <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-yellow-300 font-semibold mb-1">Replace Current Resume</p>
+                    <p className="text-yellow-400 text-sm">
+                      This will permanently replace your current resume ({data?.fileName}) and all associated analysis data.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <ResumeUpload
+              onFileUpload={handleResumeUpload}
+              isUploading={isUpdating || state.isUploading}
+              uploadProgress={state.uploadProgress}
+              error={state.error || undefined}
+              existingFileName={hasResume ? data?.fileName : undefined}
+            />
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

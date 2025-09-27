@@ -151,14 +151,17 @@ export function useResumeData(): UseResumeDataReturn {
     if (!user) return null;
 
     try {
-      // Check if user has a resume file
+      // Check if user has a resume file (this is where the resume info is stored)
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('resume_file_name, resume_file_path, resume_uploaded_at')
         .eq('id', user.id)
         .single();
 
+      console.log('👤 User data from users table:', userData, userError);
+
       if (userError || !userData?.resume_file_path) {
+        console.log('❌ No resume found in users table');
         return null; // No resume uploaded
       }
 
@@ -170,7 +173,7 @@ export function useResumeData(): UseResumeDataReturn {
         .eq('platform', 'resume')
         .single();
 
-      // Get latest analysis results
+      // Get latest analysis results for this resume file
       const { data: analysisData, error: analysisError } = await supabase
         .from('resume_analysis')
         .select('*')
@@ -180,8 +183,15 @@ export function useResumeData(): UseResumeDataReturn {
         .limit(1)
         .single();
 
+      // Helper function to extract filename from path
+      const extractFileName = (path: string): string => {
+        if (!path) return 'Unknown';
+        const parts = path.split('/');
+        return parts[parts.length - 1] || 'resume.pdf';
+      };
+
       const resumeData: ResumeData = {
-        fileName: userData.resume_file_name,
+        fileName: userData.resume_file_name || extractFileName(userData.resume_file_path),
         filePath: userData.resume_file_path,
         uploadedAt: userData.resume_uploaded_at,
       };
@@ -246,8 +256,10 @@ export function useResumeData(): UseResumeDataReturn {
       const resumeData = await fetchFromDatabase(false);
       setData(resumeData);
 
+      // Don't set error for new users with no resume - this is expected
+      // The hasResume flag will handle showing the upload interface
       if (!resumeData) {
-        setError('No resume found. Please upload a resume first.');
+        console.log('✅ New user detected - no resume found, will show upload interface');
       }
 
     } catch (err) {

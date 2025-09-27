@@ -39,6 +39,13 @@ export function ResumeUpload({
   const [validationError, setValidationError] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Clear validation error when a new file is selected or existing file changes
+  React.useEffect(() => {
+    if (selectedFile || existingFileName) {
+      setValidationError('');
+    }
+  }, [selectedFile, existingFileName]);
+
   const validateFile = useCallback((file: File): string | null => {
     // Check file type
     if (!Object.keys(ALLOWED_FILE_TYPES).includes(file.type)) {
@@ -148,53 +155,60 @@ export function ResumeUpload({
           title="Select resume file"
         />
 
-        {/* Upload Area */}
-        {!hasFile && (
-          <motion.div
-            className={`
-              relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 cursor-pointer
-              ${isDragActive 
-                ? 'border-blue-500 bg-blue-500/10 scale-105' 
-                : 'border-gray-600 hover:border-blue-500/50 hover:bg-gray-700/30'
-              }
-              ${isUploading ? 'pointer-events-none opacity-50' : ''}
-            `}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onClick={openFileDialog}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <div className="flex flex-col items-center gap-4">
-              <motion.div
-                className={`p-4 rounded-full ${isDragActive ? 'bg-blue-500/20' : 'bg-gray-700/50'}`}
-                animate={{ 
-                  scale: isDragActive ? 1.1 : 1,
-                  rotate: isDragActive ? 5 : 0 
-                }}
-              >
-                <Upload className={`h-8 w-8 ${isDragActive ? 'text-blue-400' : 'text-gray-400'}`} />
-              </motion.div>
-              
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-white">
-                  {isDragActive ? 'Drop your resume here' : 'Upload your resume'}
-                </h3>
-                <p className="text-sm text-gray-400">
-                  Drag and drop your file here, or click to browse
-                </p>
-                <p className="text-xs text-gray-500">
-                  Supports PDF, JPG, PNG files up to {maxSizeInMB}MB
-                </p>
-              </div>
-
-              <Button type="button" variant="outline" size="sm" className="border-gray-600 text-gray-300 hover:bg-gray-700 hover:border-blue-500 hover:text-blue-400">
-                Choose File
-              </Button>
+        {/* Upload Area - Always show for updating */}
+        <motion.div
+          className={`
+            relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 cursor-pointer
+            ${isDragActive 
+              ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/20' 
+              : 'border-gray-600 hover:border-blue-500/50 hover:bg-gray-700/30'
+            }
+            ${isUploading ? 'pointer-events-none opacity-50' : ''}
+          `}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onClick={openFileDialog}
+          whileHover={{ scale: isUploading ? 1 : 1.02 }}
+          whileTap={{ scale: isUploading ? 1 : 0.98 }}
+        >
+          <div className="flex flex-col items-center gap-4">
+            <motion.div
+              className={`p-4 rounded-full ${isDragActive ? 'bg-blue-500/20' : 'bg-gray-700/50'}`}
+              animate={{ 
+                scale: isDragActive ? 1.1 : 1,
+                rotate: isDragActive ? 5 : 0 
+              }}
+            >
+              <Upload className={`h-8 w-8 ${isDragActive ? 'text-blue-400' : 'text-gray-400'}`} />
+            </motion.div>
+            
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold text-white">
+                {isDragActive ? 'Drop your resume here' : existingFileName ? 'Replace Resume' : 'Upload your resume'}
+              </h3>
+              <p className="text-sm text-gray-400">
+                {existingFileName 
+                  ? `Current file: ${existingFileName}` 
+                  : 'Drag and drop your file here, or click to browse'
+                }
+              </p>
+              <p className="text-xs text-gray-500">
+                Supports PDF, JPG, PNG files up to {maxSizeInMB}MB
+              </p>
             </div>
-          </motion.div>
-        )}
+
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm" 
+              className="border-gray-600 text-gray-300 hover:bg-gray-700 hover:border-blue-500 hover:text-blue-400"
+              disabled={isUploading}
+            >
+              {existingFileName ? 'Choose New File' : 'Choose File'}
+            </Button>
+          </div>
+        </motion.div>
 
         {/* File Preview */}
         <AnimatePresence>
@@ -274,14 +288,17 @@ export function ResumeUpload({
         </AnimatePresence>
 
         {/* Upload Button (alternative to drag-drop) */}
-        {!hasFile && !isUploading && (
-          <div className="flex justify-center pt-4">
-            <Button onClick={openFileDialog} variant="outline" className="w-full border-gray-600 text-gray-300 hover:bg-gray-700 hover:border-blue-500 hover:text-blue-400">
-              <Upload className="h-4 w-4 mr-2" />
-              Select Resume File
-            </Button>
-          </div>
-        )}
+        <div className="flex justify-center pt-4">
+          <Button 
+            onClick={openFileDialog} 
+            variant="outline" 
+            className="w-full border-gray-600 text-gray-300 hover:bg-gray-700 hover:border-blue-500 hover:text-blue-400"
+            disabled={isUploading}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {existingFileName ? 'Select New Resume File' : 'Select Resume File'}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
