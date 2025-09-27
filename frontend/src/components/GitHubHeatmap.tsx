@@ -130,7 +130,7 @@ const GitHubHeatmap: React.FC<GitHubHeatmapProps> = ({ activityData, activitySum
   };
 
   return (
-    <div className="bg-gray-900 border border-gray-700 rounded-lg p-4" style={{ backgroundColor: '#0d1117', borderColor: '#30363d' }}>
+    <div className="bg-black border border-gray-700 rounded-lg p-4" style={{ backgroundColor: '#000000', borderColor: '#30363d' }}>
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-sm font-medium" style={{ color: '#f0f6fc' }}>
@@ -140,7 +140,7 @@ const GitHubHeatmap: React.FC<GitHubHeatmapProps> = ({ activityData, activitySum
       </div>
 
       {/* Main heatmap container */}
-      <div className="border border-gray-700 rounded-md p-4" style={{ borderColor: '#21262d', backgroundColor: '#0d1117', overflow: 'visible' }}>
+      <div className="border border-gray-700 rounded-md p-4" style={{ borderColor: '#21262d', backgroundColor: '#000000', overflow: 'visible' }}>
         {/* Month labels row */}
         <div className="relative mb-2" style={{ marginLeft: '32px', height: '16px' }}>
           {monthLabels.map((label, index) => (

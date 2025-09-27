@@ -129,10 +129,10 @@ export function ResumeUpload({
   const hasFile = existingFileName || selectedFile;
 
   return (
-    <Card className="glassmorphism">
+    <Card className="bg-gray-800 border-gray-700">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Upload className="h-5 w-5" />
+        <CardTitle className="flex items-center gap-2 text-white">
+          <Upload className="h-5 w-5 text-blue-400" />
           Resume Upload
         </CardTitle>
       </CardHeader>
@@ -154,8 +154,8 @@ export function ResumeUpload({
             className={`
               relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 cursor-pointer
               ${isDragActive 
-                ? 'border-primary bg-primary/5 scale-105' 
-                : 'border-border hover:border-primary/50 hover:bg-accent/30'
+                ? 'border-blue-500 bg-blue-500/10 scale-105' 
+                : 'border-gray-600 hover:border-blue-500/50 hover:bg-gray-700/30'
               }
               ${isUploading ? 'pointer-events-none opacity-50' : ''}
             `}
@@ -168,28 +168,28 @@ export function ResumeUpload({
           >
             <div className="flex flex-col items-center gap-4">
               <motion.div
-                className={`p-4 rounded-full ${isDragActive ? 'bg-primary/20' : 'bg-accent/50'}`}
+                className={`p-4 rounded-full ${isDragActive ? 'bg-blue-500/20' : 'bg-gray-700/50'}`}
                 animate={{ 
                   scale: isDragActive ? 1.1 : 1,
                   rotate: isDragActive ? 5 : 0 
                 }}
               >
-                <Upload className={`h-8 w-8 ${isDragActive ? 'text-primary' : 'text-muted-foreground'}`} />
+                <Upload className={`h-8 w-8 ${isDragActive ? 'text-blue-400' : 'text-gray-400'}`} />
               </motion.div>
               
               <div className="space-y-2">
-                <h3 className="text-lg font-semibold">
+                <h3 className="text-lg font-semibold text-white">
                   {isDragActive ? 'Drop your resume here' : 'Upload your resume'}
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-gray-400">
                   Drag and drop your file here, or click to browse
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-gray-500">
                   Supports PDF, JPG, PNG files up to {maxSizeInMB}MB
                 </p>
               </div>
 
-              <Button type="button" variant="outline" size="sm">
+              <Button type="button" variant="outline" size="sm" className="border-gray-600 text-gray-300 hover:bg-gray-700 hover:border-blue-500 hover:text-blue-400">
                 Choose File
               </Button>
             </div>
@@ -203,16 +203,16 @@ export function ResumeUpload({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="glassmorphism p-4 rounded-xl"
+              className="bg-gray-700 p-4 rounded-xl border border-gray-600"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {getFileIcon(existingFileName || selectedFile?.name || '')}
                   <div>
-                    <p className="font-medium text-sm">
+                    <p className="font-medium text-sm text-white">
                       {existingFileName || selectedFile?.name}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-gray-400">
                       {selectedFile ? formatFileSize(selectedFile.size) : 'Uploaded file'}
                     </p>
                   </div>
@@ -227,6 +227,7 @@ export function ResumeUpload({
                     size="sm"
                     onClick={handleRemoveFile}
                     disabled={isUploading}
+                    className="text-gray-400 hover:text-white hover:bg-gray-600"
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -246,10 +247,10 @@ export function ResumeUpload({
               className="space-y-2"
             >
               <div className="flex justify-between text-sm">
-                <span>Uploading...</span>
-                <span>{uploadProgress}%</span>
+                <span className="text-gray-300">Uploading...</span>
+                <span className="text-gray-300">{uploadProgress}%</span>
               </div>
-              <Progress value={uploadProgress} className="h-2" />
+              <Progress value={uploadProgress} className="h-2 bg-gray-700" />
             </motion.div>
           )}
         </AnimatePresence>
@@ -275,7 +276,7 @@ export function ResumeUpload({
         {/* Upload Button (alternative to drag-drop) */}
         {!hasFile && !isUploading && (
           <div className="flex justify-center pt-4">
-            <Button onClick={openFileDialog} variant="outline" className="w-full">
+            <Button onClick={openFileDialog} variant="outline" className="w-full border-gray-600 text-gray-300 hover:bg-gray-700 hover:border-blue-500 hover:text-blue-400">
               <Upload className="h-4 w-4 mr-2" />
               Select Resume File
             </Button>

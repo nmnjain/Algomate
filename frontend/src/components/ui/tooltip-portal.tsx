@@ -37,7 +37,7 @@ const TooltipPortal: React.FC<TooltipPortalProps> = ({
         exit={{ opacity: 0, y: 10 }}
         className="fixed text-white text-xs rounded-md px-2 py-1 pointer-events-none shadow-lg"
         style={{
-          backgroundColor: '#21262d',
+          backgroundColor: '#000000',
           border: '1px solid #30363d',
           left: position.x,
           top: position.y,

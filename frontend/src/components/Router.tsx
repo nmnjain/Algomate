@@ -3,6 +3,12 @@ import App from '../App';
 import {LoginPage} from './LoginPage';
 import {SignupPage} from './SignupPage';
 import {DashboardPage} from './DashboardPage';
+import { UnifiedDashboard } from './UnifiedDashboard';
+import { OverviewDashboard } from './OverviewDashboard';
+import GitHubPage from './GitHubPage';
+import { LeetCodePage } from './LeetCodePage';
+import { GFGPage } from './GFGPage';
+import { ResumePage } from './ResumePage';
 import AuthCallback from './AuthCallback';
 import { useAuth } from '../contexts/AuthContext';
 import { HeroSection } from './HeroSection';
@@ -45,11 +51,14 @@ export function AppRouter() {
           } />
           <Route path="login" element={!user ? <LoginPage /> : <Navigate to="/dashboard" />} />
           <Route path="signup" element={!user ? <SignupPage /> : <Navigate to="/dashboard" />} />
-          <Route path="dashboard" element={user ? <DashboardPage /> : <Navigate to="/login" />} />
-          <Route 
-            path="hackathons" 
-            element={user ? <HackathonsRoutePage /> : <Navigate to="/login" />} 
-          />
+          <Route path="dashboard/*" element={user ? <UnifiedDashboard /> : <Navigate to="/login" />}>
+            <Route index element={<OverviewDashboard />} />
+            <Route path="github" element={<GitHubPage />} />
+            <Route path="leetcode" element={<LeetCodePage />} />
+            <Route path="gfg" element={<GFGPage />} />
+            <Route path="resume" element={<ResumePage />} />
+            <Route path="hackathons" element={<HackathonsRoutePage />} />
+          </Route>
           <Route path="auth/callback" element={<AuthCallback />} />
         </Route>
       </Routes>

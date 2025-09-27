@@ -4,7 +4,7 @@ import { Footer } from "./components/Footer";
 
 function App() {
   return (
-    <div className="dark min-h-screen bg-background text-foreground">
+    <div className="dark min-h-screen bg-background text-foreground" style={{ backgroundColor: '#000000' }}>
       <Header />
       <main>
         <Outlet />

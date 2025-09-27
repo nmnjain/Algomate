@@ -4,7 +4,28 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Progress } from './ui/progress';
-import { CalendarDays, Trophy, Target, Code, Award, Clock, TrendingUp, Users, Star, Brain } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { 
+  CalendarDays, 
+  Trophy, 
+  Target, 
+  Code2, 
+  Award, 
+  Clock, 
+  TrendingUp, 
+  Users, 
+  Star, 
+  Brain,
+  RefreshCw,
+  Zap,
+  CheckCircle,
+  AlertCircle,
+  BarChart3,
+  Activity,
+  Calendar,
+  Flame,
+  Languages
+} from 'lucide-react';
 import { useLeetCodeData } from '../utils/useLeetCodeData';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription } from './ui/alert';
@@ -310,56 +331,81 @@ export const LeetCodeDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="max-w-6xl mx-auto space-y-8" style={{ backgroundColor: '#000000' }}>
+        {/* Loading Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg animate-pulse">
+              <Code2 className="h-6 w-6 text-white" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-48 bg-gray-700" />
+              <Skeleton className="h-4 w-32 bg-gray-700" />
+            </div>
+          </div>
+          <div className="flex items-center space-x-3">
+            <RefreshCw className="h-5 w-5 animate-spin text-orange-400" />
+            <span className="text-gray-300">Loading LeetCode data...</span>
+          </div>
+        </div>
+        
+        {/* Loading Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[...Array(4)].map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-4">
-                <Skeleton className="h-16 w-full" />
+            <Card key={i} className="bg-gray-800 border-gray-700">
+              <CardContent className="p-6">
+                <Skeleton className="h-20 w-full bg-gray-700" />
               </CardContent>
             </Card>
           ))}
         </div>
-        <Card>
-          <CardContent className="p-6">
-            <Skeleton className="h-64 w-full" />
-          </CardContent>
-        </Card>
       </div>
     );
   }
 
   if (!username) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Code className="h-5 w-5" />
-            Connect LeetCode
-          </CardTitle>
-          <CardDescription>
-            Enter your LeetCode username to view your coding statistics and progress
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Enter LeetCode username"
-              value={usernameInput}
-              onChange={(e) => setUsernameInput(e.target.value)}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              onKeyPress={(e) => e.key === 'Enter' && handleUsernameSubmit()}
-            />
-            <Button 
-              onClick={handleUsernameSubmit}
-              disabled={isUpdatingUsername || !usernameInput.trim()}
-            >
-              {isUpdatingUsername ? 'Connecting...' : 'Connect'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="max-w-6xl mx-auto" style={{ backgroundColor: '#000000' }}>
+        <Card className="bg-gray-800 border-gray-700 shadow-2xl">
+          <CardContent className="p-12">
+            <div className="text-center space-y-6">
+              <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-amber-600 rounded-full flex items-center justify-center mx-auto shadow-lg">
+                <Code2 className="h-10 w-10 text-white" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold text-white">Connect Your LeetCode</h2>
+                <p className="text-gray-300 max-w-md mx-auto">
+                  Enter your LeetCode username to view your coding journey, problem-solving statistics, and get AI-powered insights.
+                </p>
+              </div>
+              
+              <div className="max-w-sm mx-auto space-y-4">
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    placeholder="Enter your LeetCode username"
+                    value={usernameInput}
+                    onChange={(e) => setUsernameInput(e.target.value)}
+                    className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    onKeyPress={(e) => e.key === 'Enter' && handleUsernameSubmit()}
+                  />
+                  <Button
+                    onClick={handleUsernameSubmit}
+                    disabled={isUpdatingUsername || !usernameInput.trim()}
+                    className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white px-6"
+                  >
+                    {isUpdatingUsername ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      'Connect'
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -367,42 +413,34 @@ export const LeetCodeDashboard: React.FC = () => {
     const isCachedData = data !== null;
     
     return (
-      <div className="space-y-4">
+      <div className="max-w-6xl mx-auto space-y-8" style={{ backgroundColor: '#000000' }}>
+        <Card className="bg-gray-800 border-red-400/50">
+          <CardContent className="p-8">
+            <div className="text-center space-y-4">
+              <AlertCircle className="h-16 w-16 text-red-400 mx-auto" />
+              <h3 className="text-xl font-bold text-white">
+                LeetCode Connection Issue
+              </h3>
+              <p className="text-gray-300 mb-6">{error}</p>
+              <Button 
+                onClick={refetch} 
+                variant="outline" 
+                className="border-red-400 text-red-400 hover:bg-red-400/10"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Try Again
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+        
         {isCachedData && (
-          <Alert className="border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950">
+          <Alert className="border-yellow-400/50 bg-yellow-400/10 text-yellow-400">
             <Clock className="h-4 w-4" />
-            <AlertDescription>
-              {error} Showing cached data while we resolve the issue.
+            <AlertDescription className="text-yellow-300">
+              Showing cached data while we resolve the connection issue.
             </AlertDescription>
           </Alert>
-        )}
-        
-        {!isCachedData && (
-          <Card>
-            <CardContent className="p-6">
-              <Alert>
-                <AlertDescription>
-                  {error}
-                </AlertDescription>
-              </Alert>
-              <div className="mt-4 flex gap-2">
-                <Button 
-                  onClick={refetch} 
-                  variant="outline" 
-                  size="sm"
-                >
-                  Retry
-                </Button>
-                <Button 
-                  onClick={() => setUsernameInput('')} 
-                  variant="ghost" 
-                  size="sm"
-                >
-                  Change Username
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
         )}
         
         {isCachedData && renderDashboardContent()}
@@ -431,122 +469,264 @@ export const LeetCodeDashboard: React.FC = () => {
     const { activityData, activitySummary } = prepareHeatmapData(calendar || [], stats);
     
   return (
-    <div className="container mx-auto p-4 space-y-6 max-w-7xl">
+    <div className="max-w-6xl mx-auto space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <Code className="h-6 w-6 text-orange-500" />
-            LeetCode Dashboard
-          </h2>
-          <p className="text-gray-600">
-            Tracking progress for <span className="font-medium">@{username}</span>
-            {backgroundRefreshing && (
-              <span className="ml-2 text-xs text-blue-600">Refreshing...</span>
-            )}
-          </p>
-        </div>
-        <Button onClick={refetch} variant="outline" size="sm" className="whitespace-nowrap">
-          Refresh Data
-        </Button>
-      </div>
-
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard
-          title="Problems Solved"
-          value={stats.totalSolved}
-          icon={<Target className="h-6 w-6" />}
-          subtitle={`of ${stats.totalQuestions} total`}
-          color="text-green-600"
-        />
-        <StatsCard
-          title="Contest Rating"
-          value={stats.ranking > 0 ? stats.ranking.toLocaleString() : 'Unrated'}
-          icon={<Trophy className="h-6 w-6" />}
-          subtitle="Global Ranking"
-          color="text-yellow-600"
-        />
-        <StatsCard
-          title="Reputation"
-          value={stats.reputation}
-          icon={<Star className="h-6 w-6" />}
-          subtitle="Community Points"
-          color="text-purple-600"
-        />
-        <StatsCard
-          title="Easy | Medium | Hard"
-          value={`${stats.easySolved} | ${stats.mediumSolved} | ${stats.hardSolved}`}
-          icon={<TrendingUp className="h-6 w-6" />}
-          subtitle="Problems by difficulty"
-          color="text-blue-600"
-        />
-      </div>
-
-      {/* Difficulty Progress */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Problem Solving Progress</CardTitle>
-          <CardDescription>Track your progress across different difficulty levels</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="font-medium text-green-600">Easy</span>
-                <span>{stats.easySolved} solved</span>
-              </div>
-              <Progress value={(stats.easySolved / (stats.totalQuestions * 0.4)) * 100} className="h-2" />
-            </div>
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="font-medium text-yellow-600">Medium</span>
-                <span>{stats.mediumSolved} solved</span>
-              </div>
-              <Progress value={(stats.mediumSolved / (stats.totalQuestions * 0.4)) * 100} className="h-2" />
-            </div>
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="font-medium text-red-600">Hard</span>
-                <span>{stats.hardSolved} solved</span>
-              </div>
-              <Progress value={(stats.hardSolved / (stats.totalQuestions * 0.2)) * 100} className="h-2" />
-            </div>
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center justify-between mb-8"
+      >
+        <div className="flex items-center space-x-4">
+          <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
+            <Code2 className="h-6 w-6 text-white" />
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Tabs for different sections */}
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <div className="w-full flex justify-center mb-6">
-          <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
-            <TabsTrigger value="activity" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
-              Activity
-            </TabsTrigger>
-            <TabsTrigger value="submissions" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
-              Submissions
-            </TabsTrigger>
-            <TabsTrigger value="languages" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
-              Languages
-            </TabsTrigger>
-            <TabsTrigger value="contests" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
-              Contests
-            </TabsTrigger>
-            <TabsTrigger value="insights" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-1">
-              <Brain className="h-3 w-3" />
-              Insights
-            </TabsTrigger>
-          </TabsList>
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-400 via-amber-500 to-yellow-400 bg-clip-text text-transparent">
+              LeetCode Dashboard
+            </h1>
+            <p className="text-gray-300 text-lg">Track your problem-solving journey</p>
+          </div>
         </div>
         
-        <TabsContent value="activity">
-          <Card>
+        <div className="flex items-center space-x-3">
+          <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-sm px-3 py-1">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Connected
+          </Badge>
+          <Button 
+            onClick={refetch} 
+            variant="outline" 
+            className="border-gray-600 hover:border-gray-500 text-gray-300 hover:text-white bg-gray-800/50 hover:bg-gray-700/50"
+            disabled={backgroundRefreshing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${backgroundRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
+      </motion.div>
+
+      {/* Stats Cards */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+      >
+        <Card className="bg-gray-800 border-gray-700 shadow-lg hover:shadow-xl transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm font-medium">Total Solved</p>
+                <p className="text-3xl font-bold text-white">{stats?.totalSolved || 0}</p>
+                <p className="text-xs text-gray-500 mt-1">Problems</p>
+              </div>
+              <Trophy className="h-8 w-8 text-yellow-400" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gray-800 border-gray-700 shadow-lg hover:shadow-xl transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm font-medium">Current Ranking</p>
+                <p className="text-3xl font-bold text-white">
+                  {profile?.ranking ? profile.ranking.toLocaleString() : 'N/A'}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">Global Rank</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-blue-400" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gray-800 border-gray-700 shadow-lg hover:shadow-xl transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm font-medium">Contest Rating</p>
+                <p className="text-3xl font-bold text-white">{data?.contestRanking?.rating || 'N/A'}</p>
+                <p className="text-xs text-gray-500 mt-1">Current Rating</p>
+              </div>
+              <Award className="h-8 w-8 text-purple-400" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gray-800 border-gray-700 shadow-lg hover:shadow-xl transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm font-medium">Success Rate</p>
+                <p className="text-3xl font-bold text-white">
+                  {stats?.totalSolved && stats?.totalQuestions ? 
+                    Math.round((stats.totalSolved / stats.totalQuestions) * 100) : 0}%
+                </p>
+                <p className="text-xs text-gray-500 mt-1">Completion</p>
+              </div>
+              <Target className="h-8 w-8 text-green-400" />
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Problem Difficulty Breakdown */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <Card className="bg-gray-800 border-gray-700 shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center space-x-2">
+              <BarChart3 className="h-5 w-5 text-cyan-400" />
+              <span>Problem Difficulty Breakdown</span>
+            </CardTitle>
+            <CardDescription className="text-gray-400">
+              Your progress across different difficulty levels
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* Easy Problems */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-4 h-4 bg-green-400 rounded-full"></div>
+                    <span className="text-green-400 font-semibold text-lg">Easy</span>
+                  </div>
+                  <span className="text-white font-mono text-lg font-bold">
+                    {stats?.easySolved || 0}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm text-gray-400">
+                    <span>Solved: {stats?.easySolved || 0}</span>
+                    <span>
+                      {stats?.easySolved && stats?.totalQuestions ? 
+                        Math.round((stats.easySolved / (stats.totalQuestions * 0.4)) * 100) : 0}%
+                    </span>
+                  </div>
+                  <Progress 
+                    value={stats?.easySolved ? (stats.easySolved / (stats?.totalQuestions ? Math.floor(stats.totalQuestions * 0.4) : 1)) * 100 : 0}
+                    className="h-3 bg-gray-700"
+                  />
+                </div>
+              </div>
+
+              {/* Medium Problems */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-4 h-4 bg-yellow-400 rounded-full"></div>
+                    <span className="text-yellow-400 font-semibold text-lg">Medium</span>
+                  </div>
+                  <span className="text-white font-mono text-lg font-bold">
+                    {stats?.mediumSolved || 0}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm text-gray-400">
+                    <span>Solved: {stats?.mediumSolved || 0}</span>
+                    <span>
+                      {stats?.mediumSolved && stats?.totalQuestions ? 
+                        Math.round((stats.mediumSolved / (stats.totalQuestions * 0.4)) * 100) : 0}%
+                    </span>
+                  </div>
+                  <Progress 
+                    value={stats?.mediumSolved ? (stats.mediumSolved / (stats?.totalQuestions ? Math.floor(stats.totalQuestions * 0.4) : 1)) * 100 : 0}
+                    className="h-3 bg-gray-700"
+                  />
+                </div>
+              </div>
+
+              {/* Hard Problems */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-4 h-4 bg-red-400 rounded-full"></div>
+                    <span className="text-red-400 font-semibold text-lg">Hard</span>
+                  </div>
+                  <span className="text-white font-mono text-lg font-bold">
+                    {stats?.hardSolved || 0}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm text-gray-400">
+                    <span>Solved: {stats?.hardSolved || 0}</span>
+                    <span>
+                      {stats?.hardSolved && stats?.totalQuestions ? 
+                        Math.round((stats.hardSolved / (stats.totalQuestions * 0.2)) * 100) : 0}%
+                    </span>
+                  </div>
+                  <Progress 
+                    value={stats?.hardSolved ? (stats.hardSolved / (stats?.totalQuestions ? Math.floor(stats.totalQuestions * 0.2) : 1)) * 100 : 0}
+                    className="h-3 bg-gray-700"
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Modern Navigation Tabs */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="w-full"
+      >
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-8">
+          <div className="w-full flex justify-center mb-8">
+            <TabsList className="bg-gray-800 border border-gray-700 rounded-lg p-1 shadow-lg">
+              <TabsTrigger 
+                value="activity" 
+                className="flex items-center space-x-2 px-4 py-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-700 transition-all data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
+              >
+                <Activity className="h-4 w-4" />
+                <span className="font-medium">Activity</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="submissions" 
+                className="flex items-center space-x-2 px-4 py-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-700 transition-all data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
+              >
+                <Code2 className="h-4 w-4" />
+                <span className="font-medium">Submissions</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="languages" 
+                className="flex items-center space-x-2 px-4 py-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-700 transition-all data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
+              >
+                <Languages className="h-4 w-4" />
+                <span className="font-medium">Languages</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="contests" 
+                className="flex items-center space-x-2 px-4 py-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-700 transition-all data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
+              >
+                <Trophy className="h-4 w-4" />
+                <span className="font-medium">Contests</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="insights" 
+                className="flex items-center space-x-2 px-4 py-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-700 transition-all data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
+              >
+                <Brain className="h-4 w-4" />
+                <span className="font-medium">AI Insights</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          {/* Tab Contents */}
+          <TabsContent value="activity">
+          <Card className="bg-gray-800 border-gray-700 shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CalendarDays className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-white">
+                <CalendarDays className="h-5 w-5 text-cyan-400" />
                 Submission Activity
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-gray-400">
                 Your daily submission activity over the past year
               </CardDescription>
             </CardHeader>
@@ -586,7 +766,7 @@ export const LeetCodeDashboard: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Code className="h-5 w-5" />
+                <Code2 className="h-5 w-5" />
                 Programming Languages
               </CardTitle>
               <CardDescription>
@@ -631,8 +811,8 @@ export const LeetCodeDashboard: React.FC = () => {
         <TabsContent value="insights">
           <AdvancedLeetCodeInsights data={data} />
         </TabsContent>
-      </Tabs>
+        </Tabs>
+      </motion.div>
     </div>
-    );
-  }
+  );
 };

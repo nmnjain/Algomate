@@ -30,7 +30,7 @@ const LeetCodeHeatmap: React.FC<LeetCodeHeatmapProps> = ({ activityData, activit
   // Ensure we have valid data
   if (!activityData || activityData.length === 0) {
     return (
-      <div className="bg-gray-900 border border-gray-700 rounded-lg p-4" style={{ backgroundColor: '#0d1117', borderColor: '#30363d' }}>
+      <div className="bg-black border border-gray-700 rounded-lg p-4" style={{ backgroundColor: '#000000', borderColor: '#30363d' }}>
         <div className="text-center text-gray-500 py-8">
           No activity data available
         </div>
@@ -117,14 +117,14 @@ const LeetCodeHeatmap: React.FC<LeetCodeHeatmapProps> = ({ activityData, activit
 
   const monthLabels = getMonthLabels();
 
-  // Get color for activity level (LeetCode orange theme)
+  
   const getActivityColor = (level: number) => {
     switch (level) {
-      case 0: return '#161b22'; // Very dark gray for no activity
-      case 1: return '#4a2c00'; // Dark orange
-      case 2: return '#8b4513'; // Medium orange  
-      case 3: return '#ff8c00'; // Bright orange
-      case 4: return '#ffa500'; // Brightest orange
+      case 0: return '#161b22'; // Dark gray for no activity
+      case 1: return '#0e4429'; // Light green for 1+ submissions
+      case 2: return '#006d32'; // Medium green for 2+ submissions  
+      case 3: return '#26a641'; // Bright green for 3+ submissions
+      case 4: return '#39d353'; // Brightest green for 4+ submissions
       default: return '#161b22';
     }
   };
@@ -141,7 +141,7 @@ const LeetCodeHeatmap: React.FC<LeetCodeHeatmapProps> = ({ activityData, activit
   };
 
   return (
-    <div className="bg-gray-900 border border-gray-700 rounded-lg p-4" style={{ backgroundColor: '#0d1117', borderColor: '#30363d' }}>
+    <div className="bg-black border border-gray-700 rounded-lg p-4" style={{ backgroundColor: '#000000', borderColor: '#30363d' }}>
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-sm font-medium" style={{ color: '#f0f6fc' }}>
@@ -150,7 +150,7 @@ const LeetCodeHeatmap: React.FC<LeetCodeHeatmapProps> = ({ activityData, activit
       </div>
 
       {/* Main heatmap container */}
-      <div className="border border-gray-700 rounded-md p-4" style={{ borderColor: '#21262d', backgroundColor: '#0d1117', overflow: 'visible' }}>
+      <div className="border border-gray-700 rounded-md p-4" style={{ borderColor: '#21262d', backgroundColor: '#000000', overflow: 'visible' }}>
         {/* Month labels row */}
         <div className="relative mb-2" style={{ marginLeft: '32px', height: '16px' }}>
           {monthLabels.map((label, index) => (
@@ -219,9 +219,9 @@ const LeetCodeHeatmap: React.FC<LeetCodeHeatmapProps> = ({ activityData, activit
             <span className="text-xs" style={{ color: '#7d8590' }}>
               Current streak: {activitySummary.currentStreak} days
             </span>
-            <span className="text-xs" style={{ color: '#7d8590' }}>
+            {/* <span className="text-xs" style={{ color: '#7d8590' }}>
               Longest streak: {activitySummary.longestStreak} days
-            </span>
+            </span> */}
           </div>
           
           <div className="flex items-center gap-2">

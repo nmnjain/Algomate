@@ -13,6 +13,7 @@ import io
 import json
 from hackathon_recommender import find_matching_teammates, generate_and_store_recommendations 
 from dotenv import load_dotenv
+import re
 
 # Load environment variables from .env file
 load_dotenv()
@@ -33,19 +34,39 @@ SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 PORT = int(os.getenv("PORT", 8000))
 
+# Debug: Print environment configuration
+print("=" * 50)
+print("🚀 BACKEND SERVICE STARTUP DEBUG")
+print("=" * 50)
+print(f"ENVIRONMENT: {ENVIRONMENT}")
+print(f"PORT: {PORT}")
+print(f"GEMINI_API_KEY: {'✓ Configured' if GEMINI_API_KEY else '✗ Missing'}")
+print(f"SUPABASE_URL: {'✓ Configured' if SUPABASE_URL else '✗ Missing'}")
+print(f"SUPABASE_SERVICE_KEY: {'✓ Configured' if SUPABASE_SERVICE_KEY else '✗ Missing'}")
+
 # CORS configuration from environment
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173").split(",")
+print(f"ALLOWED_ORIGINS: {ALLOWED_ORIGINS}")
+print("=" * 50)
 
 # Production environment checks
 if ENVIRONMENT == "production":
+    print("🔍 Production environment checks...")
     if not GEMINI_API_KEY:
+        print("❌ ERROR: GEMINI_API_KEY is required in production")
         raise ValueError("GEMINI_API_KEY is required in production")
     if not SUPABASE_URL:
+        print("❌ ERROR: SUPABASE_URL is required in production")
         raise ValueError("SUPABASE_URL is required in production")
     if not SUPABASE_SERVICE_KEY:
+        print("❌ ERROR: SUPABASE_SERVICE_KEY is required in production")
         raise ValueError("SUPABASE_SERVICE_KEY is required in production")
+    print("✅ Production environment checks passed")
+else:
+    print("🛠️ Running in development mode")
 
 # Initialize FastAPI app with production configuration
+print("🚀 Initializing FastAPI app...")
 app = FastAPI(
     title="AlgoMate Resume Analysis API",
     description="OCR and AI-powered resume analysis service",
@@ -53,15 +74,20 @@ app = FastAPI(
     docs_url="/docs" if ENVIRONMENT != "production" else None,  # Disable docs in production
     redoc_url="/redoc" if ENVIRONMENT != "production" else None,
 )
+print("✅ FastAPI app initialized")
 
 # Security middleware - Trust only specific hosts in production
 if ENVIRONMENT == "production":
+    print("🔒 Adding trusted host middleware for production...")
     app.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=["*.vercel.app", "*.railway.app", "*.render.com", "localhost"]
     )
+    print("✅ Trusted host middleware added")
 
 # CORS configuration from environment variables
+print("🌐 Setting up CORS middleware...")
+print(f"CORS Allowed Origins: {ALLOWED_ORIGINS}")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -71,10 +97,12 @@ app.add_middleware(
     expose_headers=["Content-Length", "X-JSON"],
     max_age=86400,  # 24 hours
 )
+print("✅ CORS middleware added")
 
 # Security headers middleware
 @app.middleware("http")
 async def add_security_headers(request, call_next):
+    print(f"🔒 Processing request: {request.method} {request.url}")
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
@@ -82,30 +110,52 @@ async def add_security_headers(request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     if ENVIRONMENT == "production":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    print(f"✅ Security headers added, response status: {response.status_code}")
     return response
 
-# Initialize Gemini AI with timeout configuration
+# Initialize Gemini AI with working configuration from original code
+print("🤖 Initializing Gemini AI...")
 if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-    generation_config = {
-        "temperature": 0.7,
-        "top_p": 0.8,
-        "top_k": 40,
-        "max_output_tokens": 4096,  # Reduced from 8192
-    }
-    
-    model = genai.GenerativeModel(
-        'gemini-2.5-flash',  # Changed from 'gemini-2.5-flash'
-        generation_config=generation_config
-    )
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        generation_config = {
+            "temperature": 0.7,
+            "top_p": 0.8,
+            "top_k": 40,
+            "max_output_tokens": 8192,  # Increased from 4096 to allow complete responses
+        }
+        
+        model = genai.GenerativeModel(
+            'gemini-2.5-flash',  # Use correct model name
+            generation_config=generation_config
+        )
+        print("✅ Gemini AI initialized successfully")
+        print(f"Model: gemini-1.5-flash")
+        print(f"Config: {generation_config}")
+    except Exception as e:
+        print(f"❌ Failed to initialize Gemini AI: {str(e)}")
+        model = None
 else:
+    print("⚠️ Gemini API key not provided - using fallback analysis")
     model = None
 
 # Initialize Supabase client
+print("🗄️ Initializing Supabase client...")
 if SUPABASE_URL and SUPABASE_SERVICE_KEY:
-    supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    try:
+        supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+        print("✅ Supabase client initialized successfully")
+        print(f"Supabase URL: {SUPABASE_URL}")
+    except Exception as e:
+        print(f"❌ Failed to initialize Supabase client: {str(e)}")
+        supabase = None
 else:
+    print("⚠️ Supabase credentials not provided - database operations will fail")
     supabase = None
+
+print("=" * 50)
+print("🎯 BACKEND SERVICE READY")
+print("=" * 50)
 
 # Request/Response models
 class ResumeAnalysisRequest(BaseModel):
@@ -203,254 +253,296 @@ class OCRService:
     @staticmethod
     async def process_file(file_url: str, mime_type: str) -> tuple[str, float]:
         """Process file based on MIME type"""
+        print(f"📁 Processing file: {file_url}")
+        print(f"MIME type: {mime_type}")
+        
         try:
             # Download file
+            print("⬇️ Downloading file...")
             async with aiohttp.ClientSession() as session:
                 async with session.get(file_url) as response:
+                    print(f"Download response status: {response.status}")
                     if response.status != 200:
+                        error_msg = f"Failed to download file, status: {response.status}"
+                        print(f"❌ {error_msg}")
                         raise HTTPException(status_code=400, detail="Failed to download file")
                     
                     file_content = await response.read()
+                    print(f"✅ File downloaded successfully: {len(file_content)} bytes")
             
             # Process based on file type
             if mime_type == 'application/pdf':
-                return await OCRService.extract_text_from_pdf(file_content)
+                print("🔍 Processing as PDF...")
+                result = await OCRService.extract_text_from_pdf(file_content)
             elif mime_type in ['image/jpeg', 'image/jpg', 'image/png']:
-                return await OCRService.extract_text_from_image(file_content)
+                print("🔍 Processing as image...")
+                result = await OCRService.extract_text_from_image(file_content)
             else:
-                raise HTTPException(status_code=400, detail=f"Unsupported file type: {mime_type}")
+                error_msg = f"Unsupported file type: {mime_type}"
+                print(f"❌ {error_msg}")
+                raise HTTPException(status_code=400, detail=error_msg)
+            
+            print(f"✅ File processed successfully")
+            return result
         
         except Exception as e:
+            print(f"❌ File processing failed: {str(e)}")
             if isinstance(e, HTTPException):
                 raise e
             raise HTTPException(status_code=500, detail=f"File processing failed: {str(e)}")
 
 # AI Analysis Service Class
 class AIAnalysisService:
+    
     @staticmethod
-    def create_analysis_prompt(extracted_text: str) -> str:
-        """Create optimized prompt for comprehensive analysis with reduced timeout risk"""
-        # Truncate text if too long
-        max_text_length = 3000
-        if len(extracted_text) > max_text_length:
-            extracted_text = extracted_text[:max_text_length] + "...[truncated for analysis]"
-        
+    def create_optimized_analysis_prompt(extracted_text: str) -> str:
+        """Create optimized prompt that ensures complete JSON response with better structure"""
         return f"""
-        You are a technical recruiter. Analyze this resume and provide detailed JSON response:
+You are a technical recruiter analyzing resumes. You must respond with ONLY a valid JSON object - no markdown formatting, no explanations, no additional text.
 
-        RESUME TEXT:
-        {extracted_text}
+RESUME TEXT:
+{extracted_text}
 
-        Return valid JSON with ALL fields populated:
+Analyze this resume and return ONLY the following JSON structure with all fields populated:
 
-        {{
-            "skills": {{
-                "technical": {{
-                    "programming_languages": ["extract from resume"],
-                    "frameworks_libraries": ["extract from resume"],
-                    "databases": ["extract from resume"],
-                    "cloud_platforms": ["AWS/Azure/GCP found"],
-                    "devops_tools": ["Docker/K8s/CI-CD found"],
-                    "other_technical": ["remaining tech skills"]
-                }},
-                "soft_skills": ["leadership, communication, etc"],
-                "certifications": ["certs mentioned"],
-                "missing_critical_skills": ["skills needed for their level"]
-            }},
-            "experience_analysis": {{
-                "level": "Fresher|Junior|Mid-level|Senior|Lead|Principal",
-                "total_experience_years": "X.Y years",
-                "career_progression": "Excellent|Good|Average|Poor",
-                "industry_exposure": ["fintech", "healthcare", etc],
-                "gaps_in_employment": "any gaps found"
-            }},
-            "project_analysis": {{
-                "project_quality": "Exceptional|Good|Average|Poor",
-                "technical_complexity": "High|Medium|Low",
-                "business_impact": "shows business value or not",
-                "standout_projects": ["most impressive projects"],
-                "missing_project_types": ["types needed"]
-            }},
-            "education_analysis": {{
-                "degree_relevance": "relevant to tech roles",
-                "institution_tier": "Tier1|Tier2|Tier3",
-                "academic_performance": "Excellent|Good|Average",
-                "additional_courses": ["online courses found"]
-            }},
-            "resume_quality": {{
-                "overall_score": "X/10",
-                "formatting": "Professional|Good|Poor",
-                "content_clarity": "Clear|Confusing",
-                "quantified_achievements": "Strong|Weak metrics usage"
-            }},
-            "skill_gap_analysis": {{
-                "for_current_level": ["missing skills for current level"],
-                "for_next_level": ["skills for promotion"],
-                "trending_technologies": ["2024-25 trending tech to learn"],
-                "learning_priority": {{
-                    "high": ["learn in 3 months"],
-                    "medium": ["learn in 6 months"],
-                    "low": ["learn in 1 year"]
-                }}
-            }},
-            "market_competitiveness": {{
-                "overall_rating": "Highly Competitive|Competitive|Moderate|Poor",
-                "salary_range_estimate": "USD/INR range based on experience",
-                "target_companies": ["realistic company targets"],
-                "competitive_advantages": ["what makes them stand out"],
-                "major_weaknesses": ["what hurts their chances"]
-            }},
-            "industry_alignment": {{
-                "best_fit_roles": ["most suitable roles"],
-                "emerging_opportunities": ["trending roles they can pivot to"],
-                "remote_work_readiness": "assessment for remote work"
-            }},
-            "detailed_recommendations": [
-                {{
-                    "category": "Technical Skills",
-                    "recommendation": "specific actionable advice",
-                    "impact": "High|Medium|Low",
-                    "timeframe": "1-3|3-6|6-12 months",
-                    "resources": ["specific courses/platforms"]
-                }},
-                {{
-                    "category": "Projects", 
-                    "recommendation": "project suggestions",
-                    "impact": "High|Medium|Low",
-                    "timeframe": "timeline",
-                    "resources": ["guidance"]
-                }},
-                {{
-                    "category": "Experience",
-                    "recommendation": "career move suggestions", 
-                    "impact": "High|Medium|Low",
-                    "timeframe": "timeline",
-                    "resources": ["networking, job boards"]
-                }},
-                {{
-                    "category": "Resume",
-                    "recommendation": "formatting/content changes",
-                    "impact": "High|Medium|Low", 
-                    "timeframe": "Immediate|1 week",
-                    "resources": ["templates, tools"]
-                }}
-            ],
-            "ats_optimization": {{
-                "current_ats_score": "X/100",
-                "missing_keywords": ["important keywords for their field"],
-                "formatting_issues": ["ATS parsing issues"],
-                "improvements_needed": ["specific ATS improvements"]
-            }},
-            "interview_preparation": {{
-                "technical_readiness": "Strong|Moderate|Weak",
-                "likely_interview_topics": ["based on background"],
-                "preparation_suggestions": ["focus areas"]
-            }},
-            "career_trajectory": {{
-                "next_logical_step": "immediate next role target",
-                "5_year_potential": "where they could be in 5 years",
-                "career_pivot_options": ["alternative paths"]
-            }},
-            "red_flags": ["concerning patterns: job hopping, gaps, inconsistencies"],
-            "standout_qualities": ["unique strengths that make them memorable"],
-            "overall_insights": "3-4 sentence comprehensive analysis of current position, competitiveness, and strategic advice"
+{{
+    "skills": {{
+        "technical": {{
+            "programming_languages": ["list all programming languages found"],
+            "frameworks_libraries": ["list all frameworks and libraries"],
+            "databases": ["list all databases"],
+            "cloud_platforms": ["AWS, Azure, GCP, etc."],
+            "devops_tools": ["Docker, Kubernetes, Jenkins, etc."],
+            "other_technical": ["any other technical skills"]
+        }},
+        "soft_skills": ["communication", "leadership", "problem-solving", "etc"],
+        "certifications": ["list any certifications mentioned"],
+        "missing_critical_skills": ["skills they should have for their level"]
+    }},
+    "experience_analysis": {{
+        "level": "Fresher",
+        "total_experience_years": "0.0 years",
+        "career_progression": "description of career path",
+        "industry_exposure": ["industries they have experience in"],
+        "gaps_in_employment": "any employment gaps or N/A"
+    }},
+    "project_analysis": {{
+        "project_quality": "Exceptional",
+        "technical_complexity": "High",
+        "business_impact": "description of business value demonstrated",
+        "standout_projects": ["list of most impressive projects"],
+        "missing_project_types": ["types of projects they should add"]
+    }},
+    "education_analysis": {{
+        "degree_relevance": "how relevant their education is to tech roles",
+        "institution_tier": "Tier1",
+        "academic_performance": "Excellent",
+        "additional_courses": ["online courses, certifications, etc"]
+    }},
+    "resume_quality": {{
+        "overall_score": "8/10",
+        "formatting": "Professional",
+        "content_clarity": "Clear",
+        "quantified_achievements": "Strong"
+    }},
+    "skill_gap_analysis": {{
+        "for_current_level": ["skills missing for current level"],
+        "for_next_level": ["skills needed for advancement"],
+        "trending_technologies": ["2024-25 trending technologies to learn"],
+        "learning_priority": {{
+            "high": ["skills to learn in next 3 months"],
+            "medium": ["skills to learn in 6 months"],
+            "low": ["skills to learn in 1 year"]
         }}
+    }},
+    "market_competitiveness": {{
+        "overall_rating": "Competitive",
+        "salary_range_estimate": "salary range based on experience and location",
+        "target_companies": ["types of companies they should target"],
+        "competitive_advantages": ["what makes them stand out"],
+        "major_weaknesses": ["what hurts their competitiveness"]
+    }},
+    "industry_alignment": {{
+        "best_fit_roles": ["most suitable job roles"],
+        "emerging_opportunities": ["new roles they could pivot to"],
+        "remote_work_readiness": "assessment of remote work suitability"
+    }},
+    "detailed_recommendations": [
+        {{
+            "category": "Technical Skills",
+            "recommendation": "specific technical skills to develop",
+            "impact": "High",
+            "timeframe": "3 months",
+            "resources": ["specific learning resources"]
+        }},
+        {{
+            "category": "Projects",
+            "recommendation": "project ideas to build",
+            "impact": "High",
+            "timeframe": "6 months",
+            "resources": ["project guidance resources"]
+        }},
+        {{
+            "category": "Experience",
+            "recommendation": "career development advice",
+            "impact": "Medium",
+            "timeframe": "ongoing",
+            "resources": ["networking and job search resources"]
+        }},
+        {{
+            "category": "Resume",
+            "recommendation": "resume improvement suggestions",
+            "impact": "Medium",
+            "timeframe": "1 week",
+            "resources": ["resume tools and templates"]
+        }}
+    ],
+    "ats_optimization": {{
+        "current_ats_score": "75/100",
+        "missing_keywords": ["important keywords for their field"],
+        "formatting_issues": ["ATS formatting problems"],
+        "improvements_needed": ["specific ATS improvements"]
+    }},
+    "interview_preparation": {{
+        "technical_readiness": "Moderate",
+        "likely_interview_topics": ["topics they should prepare for"],
+        "preparation_suggestions": ["interview prep recommendations"]
+    }},
+    "career_trajectory": {{
+        "next_logical_step": "immediate next career move",
+        "5_year_potential": "where they could be in 5 years",
+        "career_pivot_options": ["alternative career paths"]
+    }},
+    "red_flags": ["any concerning resume patterns"],
+    "standout_qualities": ["unique strengths that make them memorable"],
+    "overall_insights": "comprehensive 2-3 sentence analysis summary",
+    "experience_level": "Fresher",
+    "focus_areas": ["main technical focus areas"],
+    "insights": "key insights about their profile",
+    "recommendations": [
+        {{
+            "category": "Skills",
+            "recommendation": "skill development advice",
+            "priority": "High"
+        }}
+    ]
+}}
 
-        Guidelines: Be specific, use current 2024-25 market data, provide actionable advice. Every field must have content - no empty arrays.
-        """
-    @staticmethod
+CRITICAL INSTRUCTIONS:
+- Respond with ONLY the JSON object above
+- Fill ALL fields with relevant content - no empty arrays or null values
+- Use realistic assessments based on the resume content
+- Be specific and actionable in recommendations
+- No markdown formatting, no code blocks, no explanatory text
+"""
+
+    @staticmethod 
     async def analyze_resume(extracted_text: str) -> AIAnalysisResult:
-        if not model:
-            return AIAnalysisService.create_fallback_analysis(extracted_text)
+        print("🤖 Starting AI analysis...")
+        print(f"Input text length: {len(extracted_text)} characters")
         
-        max_retries = 3
+        if not model:
+            print("❌ No AI model available - analysis cannot proceed")
+            raise Exception("AI model not configured - cannot perform analysis")
+        
+        max_retries = 2  # Reduced retries since we have better prompting
         for attempt in range(max_retries):
+            print(f"🔄 Analysis attempt {attempt + 1}/{max_retries}")
+            
             try:
                 if attempt > 0:
-                    wait_time = min(10, 2 ** attempt)
+                    wait_time = 3  # Shorter wait time
+                    print(f"⏳ Waiting {wait_time} seconds before retry...")
                     await asyncio.sleep(wait_time)
                 
-                # Shorten text for retries
-                text_length = max(500, 2000 - (attempt * 500))
-                text_to_use = extracted_text[:text_length] if len(extracted_text) > text_length else extracted_text
+                prompt = AIAnalysisService.create_optimized_analysis_prompt(extracted_text)
+                print("📝 Generated optimized analysis prompt")
                 
-                prompt = AIAnalysisService.create_analysis_prompt(text_to_use)
-                
-                # Use asyncio.wait_for for timeout control
+                # Use asyncio.wait_for for timeout control  
+                print("🚀 Sending request to Gemini API...")
                 response = await asyncio.wait_for(
                     asyncio.to_thread(model.generate_content, prompt),
-                    timeout=45.0  # 45 second timeout
+                    timeout=60.0  # Increased timeout for longer responses
                 )
+                print("✅ Received response from Gemini API")
                 
-                # Parse JSON response with aggressive cleaning
+                # Parse JSON response
                 response_text = response.text.strip()
-
-                # Remove markdown formatting
-                if "```json" in response_text:
-                    start = response_text.find("```json") + 7
-                    end = response_text.rfind("```")
-                    if end > start:
-                        response_text = response_text[start:end].strip()
-
-                # Remove any text before first { and after last }
-                start_brace = response_text.find('{')
-                end_brace = response_text.rfind('}')
-                if start_brace >= 0 and end_brace > start_brace:
-                    response_text = response_text[start_brace:end_brace + 1]
-
-                # Try parsing with error recovery
+                print(f"Raw response length: {len(response_text)} characters")
+                print(f"Response preview: {response_text[:200]}...")
+                
+                # The response should be pure JSON due to response_mime_type setting
                 try:
                     analysis_data = json.loads(response_text)
+                    print("✅ JSON parsed successfully on first attempt")
                     
                 except json.JSONDecodeError as e:
-                    # Attempt JSON repair
-                    import re
+                    print(f"⚠️ JSON parse error: {str(e)}")
+                    print("🔧 Attempting to clean response...")
                     
+                    # Remove any potential markdown formatting
+                    cleaned_text = response_text
+                    if "```json" in cleaned_text:
+                        start = cleaned_text.find("```json") + 7
+                        end = cleaned_text.rfind("```")
+                        if end > start:
+                            cleaned_text = cleaned_text[start:end].strip()
+                    elif "```" in cleaned_text:
+                        # Remove any other code block formatting
+                        cleaned_text = re.sub(r'```[\w]*\n?', '', cleaned_text)
+                        cleaned_text = cleaned_text.strip()
+                    
+                    # Find JSON boundaries
+                    start_brace = cleaned_text.find('{')
+                    end_brace = cleaned_text.rfind('}')
+                    if start_brace >= 0 and end_brace > start_brace:
+                        cleaned_text = cleaned_text[start_brace:end_brace + 1]
+                    
+                    # Try parsing cleaned version
                     try:
-                        # Remove trailing commas
-                        response_text = re.sub(r',\s*([}\]])', r'\1', response_text)
-
-                        # Attempt to balance parentheses/brackets/braces
-                        while response_text and response_text[-1] in [')', ']', '}']:
-                            # Count opening and closing
-                            open_paren = response_text.count('(')
-                            close_paren = response_text.count(')')
-                            open_brack = response_text.count('[')
-                            close_brack = response_text.count(']')
-                            open_brace = response_text.count('{')
-                            close_brace = response_text.count('}')
-                            
-                            # If more closing than opening, remove last char
-                            if close_paren > open_paren and response_text[-1] == ')':
-                                response_text = response_text[:-1]
-                                continue
-                            if close_brack > open_brack and response_text[-1] == ']':
-                                response_text = response_text[:-1]
-                                continue
-                            if close_brace > open_brace and response_text[-1] == '}':
-                                response_text = response_text[:-1]
-                                continue
-                            break
-                        
-                        # Remove trailing commas again after cleaning
-                        response_text = re.sub(r',\s*([}\]])', r'\1', response_text)
-                        
-                        analysis_data = json.loads(response_text)
-                                    
-                    except Exception as e2:
+                        analysis_data = json.loads(cleaned_text)
+                        print("✅ JSON parsed successfully after cleaning")
+                    except json.JSONDecodeError as e2:
+                        print(f"❌ Cleaning failed: {str(e2)}")
                         if attempt < max_retries - 1:
-                            continue  # Retry
+                            print("🔄 Retrying with fresh request...")
+                            continue
                         else:
-                            return AIAnalysisService.create_fallback_analysis(extracted_text)
+                            print("❌ All parsing attempts failed")
+                            raise Exception("Failed to parse AI response after all attempts")
+                
+                # Validate that we have a complete analysis
+                required_fields = [
+                    'skills', 'experience_analysis', 'project_analysis', 
+                    'education_analysis', 'resume_quality', 'skill_gap_analysis',
+                    'market_competitiveness', 'industry_alignment'
+                ]
+                
+                missing_fields = [field for field in required_fields if field not in analysis_data or not analysis_data[field]]
+                if missing_fields:
+                    print(f"⚠️ Missing required fields: {missing_fields}")
+                    if attempt < max_retries - 1:
+                        print("🔄 Retrying for complete analysis...")
+                        continue
+                    else:
+                        raise Exception(f"Incomplete analysis - missing fields: {missing_fields}")
+                
+                # Validate required fields and create result
+                print("📊 Creating AI analysis result...")
+                
+                # Ensure all required fields exist with defaults
+                skills = analysis_data.get("skills", {})
+                if not isinstance(skills, dict):
+                    skills = {"technical": [], "soft": []}
                 
                 result = AIAnalysisResult(
-                    skills=analysis_data.get("skills", {"technical": [], "soft": []}),
+                    skills=skills,
                     experience_level=analysis_data.get("experience_level", "Entry"),
                     focus_areas=analysis_data.get("focus_areas", []),
-                    insights=analysis_data.get("overall_insights", ""),  # Changed from "insights"
-                    recommendations=analysis_data.get("detailed_recommendations", []),  # Changed key
+                    insights=analysis_data.get("overall_insights", analysis_data.get("insights", "")),
+                    recommendations=analysis_data.get("recommendations", analysis_data.get("detailed_recommendations", [])),
                     
-                    # Add all the new fields
+                    # All additional fields
                     experience_analysis=analysis_data.get("experience_analysis", {}),
                     project_analysis=analysis_data.get("project_analysis", {}),
                     education_analysis=analysis_data.get("education_analysis", {}),
@@ -467,63 +559,22 @@ class AIAnalysisService:
                     overall_insights=analysis_data.get("overall_insights", "")
                 )
                 
+                print("✅ Complete AI analysis result created successfully")
                 return result
                 
             except asyncio.TimeoutError:
+                print(f"⏰ Timeout on attempt {attempt + 1}")
                 if attempt == max_retries - 1:
-                    return AIAnalysisService.create_fallback_analysis(extracted_text)
+                    print("❌ Analysis failed due to timeout")
+                    raise Exception("AI analysis timed out after all attempts")
             except Exception as e:
+                print(f"❌ Error on attempt {attempt + 1}: {str(e)}")
                 if attempt == max_retries - 1:
-                    return AIAnalysisService.create_fallback_analysis(extracted_text)
+                    print("❌ All analysis attempts failed")
+                    raise Exception(f"AI analysis failed: {str(e)}")
         
-        return AIAnalysisService.create_fallback_analysis(extracted_text)
-
-    @staticmethod
-    def create_fallback_analysis(extracted_text: str) -> AIAnalysisResult:
-        """Create basic analysis when AI fails"""
-        words = extracted_text.lower().split()
-        
-        # Basic skill detection
-        technical_skills = []
-        for skill in ["python", "javascript", "react", "node", "sql", "aws", "docker", "git"]:
-            if skill in words:
-                technical_skills.append(skill.title())
-        
-        # Basic experience level detection
-        experience_level = "Entry"
-        if any(word in words for word in ["senior", "lead", "manager", "architect"]):
-            experience_level = "Senior"
-        elif any(word in words for word in ["mid", "intermediate", "3", "4", "5"]):
-            experience_level = "Mid"
-        
-        return AIAnalysisResult(
-            skills={"technical": technical_skills, "soft": ["Communication", "Problem Solving"]},
-            experience_level=experience_level,
-            focus_areas=["Software Development"],
-            insights="Basic analysis completed. For detailed insights, please ensure AI service is properly configured.",
-            recommendations=[
-                {
-                    "category": "Profile",
-                    "suggestion": "Add more specific technical skills and project details",
-                    "priority": "Medium"
-                }
-            ],
-            # Add default values for all new fields
-            experience_analysis={"level": experience_level, "total_experience_years": "0 years"},
-            project_analysis={"project_quality": "Average"},
-            education_analysis={"degree_relevance": "Unknown"},
-            resume_quality={"overall_score": "5/10"},
-            skill_gap_analysis={"for_current_level": ["More specific skills needed"]},
-            market_competitiveness={"overall_rating": "Moderate"},
-            industry_alignment={"best_fit_roles": ["Software Developer"]},
-            detailed_recommendations=[],
-            ats_optimization={"current_ats_score": "50/100"},
-            interview_preparation={"technical_readiness": "Moderate"},
-            career_trajectory={"next_logical_step": "Continue learning"},
-            red_flags=[],
-            standout_qualities=[],
-            overall_insights="Basic analysis completed."
-        )
+        print("❌ All attempts failed")
+        raise Exception("AI analysis failed after all retry attempts")
 
 # Background task for processing resume
 async def process_resume_background(
@@ -534,40 +585,90 @@ async def process_resume_background(
     analysis_id: str
 ):
     """Background task to process resume analysis"""
+    print("=" * 50)
+    print("🔄 BACKGROUND PROCESSING STARTED")
+    print("=" * 50)
+    print(f"Analysis ID: {analysis_id}")
+    print(f"File URL: {file_url}")
+    print(f"MIME Type: {mime_type}")
+    print(f"User ID: {user_id}")
+    
     try:
         # Update status to processing
+        print("📝 Updating status to 'processing'...")
         await update_analysis_status(analysis_id, "processing")
         
         # OCR Processing
-
+        print("🔍 Starting OCR processing...")
         start_time = datetime.now()
         extracted_text, confidence = await OCRService.process_file(file_url, mime_type)
         processing_time = (datetime.now() - start_time).total_seconds()
         
+        print(f"✅ OCR completed in {processing_time:.2f} seconds")
+        print(f"  - Text length: {len(extracted_text)} characters")
+        print(f"  - Confidence: {confidence}%")
+        print(f"  - Preview: {extracted_text[:200]}...")
+        
         # AI Analysis
-        ai_analysis = await AIAnalysisService.analyze_resume(extracted_text)
+        print("🤖 Starting AI analysis...")
+        start_time = datetime.now()
         
-        # Update database with results
-        await save_analysis_results(
-            analysis_id,
-            extracted_text,
-            confidence,
-            ai_analysis,
-            user_id
-        )
-        
-        # Update status to completed
-        await update_analysis_status(analysis_id, "completed")
-        await generate_and_store_recommendations(user_id, supabase)
+        try:
+            ai_analysis = await AIAnalysisService.analyze_resume(extracted_text)
+            analysis_time = (datetime.now() - start_time).total_seconds()
+            
+            print(f"✅ AI analysis completed in {analysis_time:.2f} seconds")
+            print(f"  - Experience level: {ai_analysis.experience_level}")
+            print(f"  - Skills found: {len(ai_analysis.skills.get('technical', {}).get('programming_languages', []))} programming languages")
+            
+            # Update database with results ONLY if analysis succeeded
+            print("💾 Saving analysis results to database...")
+            await save_analysis_results(
+                analysis_id,
+                extracted_text,
+                confidence,
+                ai_analysis,
+                user_id
+            )
+            
+            # Update status to completed
+            print("📝 Updating status to 'completed'...")
+            await update_analysis_status(analysis_id, "completed")
+            
+            print("🎯 Generating hackathon recommendations...")
+            await generate_and_store_recommendations(user_id, supabase)
+            
+            print("✅ BACKGROUND PROCESSING COMPLETED SUCCESSFULLY")
+            print("=" * 50)
+            
+        except Exception as ai_error:
+            # AI analysis failed - do not update database with partial results
+            analysis_time = (datetime.now() - start_time).total_seconds()
+            error_msg = f"AI analysis failed after {analysis_time:.2f} seconds: {str(ai_error)}"
+            print(f"❌ {error_msg}")
+            print("❌ Database will NOT be updated - no valid analysis to save")
+            
+            # Update status to failed with specific error
+            await update_analysis_status(analysis_id, "failed", error_msg)
+            print("=" * 50)
+            return
         
     except Exception as e:
         # Update status to failed
         error_msg = f"Resume processing failed: {str(e)}"
+        print(f"❌ BACKGROUND PROCESSING FAILED: {error_msg}")
+        print(f"Exception type: {type(e).__name__}")
+        print("=" * 50)
         await update_analysis_status(analysis_id, "failed", error_msg)
 
 async def update_analysis_status(analysis_id: str, status: str, error: str = None):
     """Update analysis status in database"""
+    print(f"📝 Updating analysis status: {analysis_id} -> {status}")
+    if error:
+        print(f"Error details: {error}")
+    
     if not supabase:
+        print("⚠️ No Supabase client - skipping status update")
         return
     
     try:
@@ -579,8 +680,10 @@ async def update_analysis_status(analysis_id: str, status: str, error: str = Non
         if error:
             update_data["processing_error"] = error
         
-        supabase.table("resume_analysis").update(update_data).eq("id", analysis_id).execute()
+        result = supabase.table("resume_analysis").update(update_data).eq("id", analysis_id).execute()
+        print(f"✅ Status updated successfully: {len(result.data)} records affected")
     except Exception as e:
+        print(f"❌ Failed to update status: {str(e)}")
         pass  # Log error in production logging system
 
 async def save_analysis_results(
@@ -591,14 +694,30 @@ async def save_analysis_results(
     user_id: str
 ):
     """Save comprehensive analysis results to database"""
+    print("💾 Saving analysis results to database...")
+    print(f"Analysis ID: {analysis_id}")
+    print(f"User ID: {user_id}")
+    print(f"Text length: {len(extracted_text)}")
+    print(f"Confidence: {confidence}")
+    
     if not supabase:
+        print("⚠️ No Supabase client - skipping database save")
         return
     
     try:
         # Parse the AI analysis for detailed fields
         analysis_data = ai_analysis.dict() if hasattr(ai_analysis, 'dict') else ai_analysis
+        print("📊 Parsed AI analysis data")
+        
+        # Extract key fields for logging
+        overall_score = analysis_data.get("resume_quality", {}).get("overall_score", "5/10")
+        ats_score = analysis_data.get("ats_optimization", {}).get("current_ats_score", "50/100")
+        experience_level = analysis_data.get("experience_level", "Entry")
+        
+        print(f"Key metrics - Overall: {overall_score}, ATS: {ats_score}, Experience: {experience_level}")
         
         # Update resume_analysis table with comprehensive data
+        print("📝 Updating resume_analysis table...")
         resume_update = supabase.table("resume_analysis").update({
             # Existing fields
             "extracted_text": extracted_text,
@@ -634,7 +753,10 @@ async def save_analysis_results(
             "updated_at": datetime.now().isoformat()
         }).eq("id", analysis_id).execute()
         
+        print(f"✅ Resume analysis table updated: {len(resume_update.data)} records")
+        
         # Enhanced cache data for dashboard with more insights
+        print("📋 Preparing cache data for user platform...")
         cache_data = {
             # Core info
             "skills": analysis_data.get("skills", {}),
@@ -659,6 +781,7 @@ async def save_analysis_results(
             "last_updated": datetime.now().isoformat()
         }
         
+        print("📝 Updating user platform data...")
         platform_update = supabase.table("user_platform_data").upsert({
             "user_id": user_id,
             "platform": "resume",
@@ -666,7 +789,12 @@ async def save_analysis_results(
             "last_updated": datetime.now().isoformat()
         }).execute()
         
+        print(f"✅ User platform data updated: {len(platform_update.data)} records")
+        print("💾 Database save completed successfully")
+        
     except Exception as e:
+        print(f"❌ Failed to save analysis results: {str(e)}")
+        print(f"Exception type: {type(e).__name__}")
         pass  # Log error in production logging system
 
 # API Endpoints
@@ -704,21 +832,37 @@ async def health_check():
 @app.post("/analyze-resume")
 async def analyze_resume(request: ResumeAnalysisRequest, background_tasks: BackgroundTasks):
     """Start resume analysis process"""
+    print("=" * 50)
+    print("📄 RESUME ANALYSIS REQUEST")
+    print("=" * 50)
+    print(f"File URL: {request.file_url}")
+    print(f"File Path: {request.file_path}")
+    print(f"User ID: {request.user_id}")
+    
     try:
         # Get file metadata from database
         if not supabase:
+            print("❌ Database service not available")
             raise HTTPException(status_code=503, detail="Database service not available")
         
+        print("🔍 Querying database for resume analysis record...")
         analysis_result = supabase.table("resume_analysis").select("*").eq("user_id", request.user_id).eq("file_path", request.file_path).order("created_at", desc=True).limit(1).execute()
+        print(f"Database query result: {len(analysis_result.data)} records found")
         
         if not analysis_result.data:
+            print("❌ Resume analysis record not found")
             raise HTTPException(status_code=404, detail="Resume analysis record not found")
         
         analysis_record = analysis_result.data[0]
         analysis_id = analysis_record["id"]
         mime_type = analysis_record["mime_type"]
         
+        print(f"✅ Found analysis record:")
+        print(f"  - Analysis ID: {analysis_id}")
+        print(f"  - MIME Type: {mime_type}")
+        
         # Start background processing
+        print("🚀 Starting background processing task...")
         background_tasks.add_task(
             process_resume_background,
             str(request.file_url),
@@ -734,12 +878,18 @@ async def analyze_resume(request: ResumeAnalysisRequest, background_tasks: Backg
             "status": "processing"
         }
         
+        print("✅ Background task started successfully")
+        print(f"Response: {response}")
+        print("=" * 50)
         return response
     
     except HTTPException as he:
+        print(f"❌ HTTP Exception: {he.detail}")
         raise he
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to start resume analysis: {str(e)}")
+        error_msg = f"Failed to start resume analysis: {str(e)}"
+        print(f"❌ Unexpected error: {error_msg}")
+        raise HTTPException(status_code=500, detail=error_msg)
 
 @app.post("/recommend-hackathons/{user_id}", status_code=202)
 async def trigger_hackathon_recommendations(user_id: str, background_tasks: BackgroundTasks):

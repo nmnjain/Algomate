@@ -1,14 +1,25 @@
 import { motion } from "motion/react";
 import { Button } from "./ui/button";
-import { Code2, Menu, X } from "lucide-react";
+import { Code2, Menu, X, LogOut } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success('Successfully signed out');
+      navigate('/');
+    } catch (error) {
+      toast.error('Error signing out');
+    }
+  };
 
   const navItems = [
     { label: "Features", href: "#features" },
@@ -73,15 +84,28 @@ export function Header() {
             {user ? (
               <motion.div
                 className="flex items-center gap-4"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6 }}
               >
-                <span className="text-muted-foreground">Welcome, {user.user_metadata?.name || user.email}</span>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-foreground">{user?.user_metadata?.name || 'User'}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email}</p>
+                </div>
                 <Button
                   onClick={() => navigate('/dashboard')}
                   className="bg-primary text-primary-foreground hover:bg-primary/90 glow-cyan"
                 >
                   Dashboard
+                </Button>
+                <Button
+                  onClick={handleSignOut}
+                  variant="outline"
+                  size="sm"
+                  className="border-border hover:bg-red-500/10 hover:border-red-500 hover:text-red-400"
+                >
+                  <LogOut size={16} className="mr-2" />
+                  Sign Out
                 </Button>
               </motion.div>
             ) : (
@@ -157,24 +181,46 @@ export function Header() {
             ))}
             <div className="pt-4 border-t border-border flex flex-col gap-3">
               {user ? (
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ 
-                    opacity: isMenuOpen ? 1 : 0,
-                    x: isMenuOpen ? 0 : -20
-                  }}
-                  transition={{ duration: 0.3, delay: 0.4 }}
-                >
-                  <Button 
-                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-                    onClick={() => {
-                      navigate('/dashboard');
-                      setIsMenuOpen(false);
+                <>
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ 
+                      opacity: isMenuOpen ? 1 : 0,
+                      x: isMenuOpen ? 0 : -20
                     }}
+                    transition={{ duration: 0.3, delay: 0.4 }}
                   >
-                    Dashboard
-                  </Button>
-                </motion.div>
+                    <Button 
+                      className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                      onClick={() => {
+                        navigate('/dashboard');
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      Dashboard
+                    </Button>
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ 
+                      opacity: isMenuOpen ? 1 : 0,
+                      x: isMenuOpen ? 0 : -20
+                    }}
+                    transition={{ duration: 0.3, delay: 0.5 }}
+                  >
+                    <Button 
+                      variant="outline"
+                      className="w-full border-border hover:bg-red-500/10 hover:border-red-500 hover:text-red-400"
+                      onClick={() => {
+                        handleSignOut();
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      <LogOut size={16} className="mr-2" />
+                      Sign Out
+                    </Button>
+                  </motion.div>
+                </>
               ) : (
                 <>
                   <motion.button

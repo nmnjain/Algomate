@@ -65,7 +65,7 @@ export function UnifiedHeatmap({ data }: Props) {
   return (
     // The component no longer has its own outer card or title
     <>
-      <div className="border border-border rounded-md p-4" style={{ backgroundColor: '#0d1117' }}>
+      <div className="border border-border rounded-md p-4" style={{ backgroundColor: '#000000' }}>
         <div className="relative mb-2" style={{ marginLeft: '32px', height: '16px' }}>
           {monthLabels.map((label) => (
             <div key={label.month} className="absolute text-xs" style={{ color: '#7d8590', left: `${label.position * 14}px`}}>

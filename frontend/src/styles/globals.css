@@ -2,14 +2,14 @@
 
 :root {
   --font-size: 14px;
-  --background: #0F1117;
+  --background: #000000;
   --foreground: #ffffff;
   --card: rgba(255, 255, 255, 0.05);
   --card-foreground: #ffffff;
-  --popover: #0F1117;
+  --popover: #000000;
   --popover-foreground: #ffffff;
   --primary: #00FFFF;
-  --primary-foreground: #0F1117;
+  --primary-foreground: #000000;
   --secondary: #8B5CF6;
   --secondary-foreground: #ffffff;
   --muted: rgba(255, 255, 255, 0.1);
@@ -31,10 +31,10 @@
   --chart-4: #10B981;
   --chart-5: #F59E0B;
   --radius: 0.75rem;
-  --sidebar: #0F1117;
+  --sidebar: #000000;
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #00FFFF;
-  --sidebar-primary-foreground: #0F1117;
+  --sidebar-primary-foreground: #000000;
   --sidebar-accent: rgba(255, 255, 255, 0.05);
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgba(255, 255, 255, 0.1);
@@ -42,14 +42,14 @@
 }
 
 .dark {
-  --background: #0F1117;
+  --background: #000000;
   --foreground: #ffffff;
   --card: rgba(255, 255, 255, 0.05);
   --card-foreground: #ffffff;
-  --popover: #0F1117;
+  --popover: #000000;
   --popover-foreground: #ffffff;
   --primary: #00FFFF;
-  --primary-foreground: #0F1117;
+  --primary-foreground: #000000;
   --secondary: #8B5CF6;
   --secondary-foreground: #ffffff;
   --muted: rgba(255, 255, 255, 0.1);
@@ -68,10 +68,10 @@
   --chart-3: #3B82F6;
   --chart-4: #10B981;
   --chart-5: #F59E0B;
-  --sidebar: #0F1117;
+  --sidebar: #000000;
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #00FFFF;
-  --sidebar-primary-foreground: #0F1117;
+  --sidebar-primary-foreground: #000000;
   --sidebar-accent: rgba(255, 255, 255, 0.05);
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgba(255, 255, 255, 0.1);
@@ -124,8 +124,16 @@
     @apply border-border outline-ring/50;
   }
 
+
+
+  
+  html {
+    background-color: #000000 !important;
+  }
+
   body {
     @apply bg-background text-foreground;
+    background-color: #000000 !important;
   }
 }
 
@@ -149,9 +157,7 @@
   }
   
   .gradient-mesh {
-    background: radial-gradient(circle at 25% 25%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 75% 75%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+    background: transparent;
   }
 }
 
