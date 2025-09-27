@@ -743,9 +743,9 @@ async def save_analysis_results(
             "standout_qualities": analysis_data.get("standout_qualities", []),
             "overall_insights": analysis_data.get("overall_insights", ""),
             
-            # Extracted scores for easy querying
-            "overall_score": analysis_data.get("resume_quality", {}).get("overall_score", "5/10").split("/")[0],
-            "ats_score": analysis_data.get("ats_optimization", {}).get("current_ats_score", "50/100").split("/")[0],
+            # Extracted scores for easy querying (proper decimal and integer types)
+            "overall_score": float(analysis_data.get("resume_quality", {}).get("overall_score", "5/10").split("/")[0]),
+            "ats_score": int(analysis_data.get("ats_optimization", {}).get("current_ats_score", "50/100").split("/")[0]),
             "competitiveness_rating": analysis_data.get("market_competitiveness", {}).get("overall_rating", "Moderate"),
             
             # Status updates
