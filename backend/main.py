@@ -303,7 +303,7 @@ You are a technical recruiter analyzing resumes. You must respond with ONLY a va
 RESUME TEXT:
 {extracted_text}
 
-Analyze this resume and return ONLY the following JSON structure with all fields populated:
+Analyze this resume and return ONLY the following JSON structure with all fields populated, give numbers in only integers not in decimal (ex not give 8.5 or 9.0 give only 8 or 9 only single integer strictly follow this in you response):
 
 {{
     "skills": {{
